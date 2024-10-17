@@ -108,15 +108,21 @@ typedef struct expression {
     int children_length;
 } Expression;
 
+/* A tablet data of one device, the tablet contains multiple measurements of
+ * this device that share the same timestamp array.
+ * Use create_tablet to create a tablet.
+ * Use add_column_to_tablet to add a column to the tablet.
+ * Use destory_tablet to free the tablet.
+ */
 typedef struct tablet {
-    char* table_name;
-    ColumnSchema** column_schema;
-    int column_num;
-    timestamp* times;
-    bool** bitmap;
-    void** value;
-    int cur_num;
-    int max_capacity;
+    char* table_name;              // device path.
+    ColumnSchema** column_schema;  // measurement schema.
+    int column_num;                // number of columns.
+    timestamp* times;              // timestamp array.
+    bool** bitmap;                 // bitmap array.
+    void** value;                  // value array.
+    int cur_num;                   // current number of rows.
+    int max_capacity;              // max capacity of the tablet.
 } Tablet;
 
 typedef struct tsfile_conf {
@@ -130,28 +136,43 @@ typedef struct query_data_ret {
     char** column_names;
     int column_num;
     QueryDataRetINTERNAL data;
-} * QueryDataRet;
+}* QueryDataRet;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-CTsFileReader ts_reader_open(const char* pathname, ErrorCode* err_code);
-CTsFileWriter ts_writer_open(const char* pathname, ErrorCode* err_code);
-CTsFileWriter ts_writer_open_flag(const char* pathname, mode_t flag,
-                                  ErrorCode* err_code);
-CTsFileWriter ts_writer_open_conf(const char* pathname, mode_t flag,
-                                  ErrorCode* err_code, TsFileConf* conf);
+/* ---------- Tablet ---------- */
 
-ErrorCode ts_writer_close(CTsFileWriter writer);
-ErrorCode ts_reader_close(CTsFileReader reader);
+// create a tablet with the given table name and max capacity.
+Tablet* create_tablet(const char* table_name, int max_capacity);
 
-ErrorCode tsfile_register_table_column(CTsFileWriter writer,
-                                       const char* table_name,
-                                       ColumnSchema* schema);
-ErrorCode tsfile_register_table(CTsFileWriter writer,
-                                TableSchema* table_shcema);
+// add a column to the tablet and malloc memory for the column.
+Tablet* add_column_to_tablet(Tablet* tablet, char* column_name,
+                             SchemaInfo column_def);
 
+// insert a data into the tablet with the given line id and column name.
+ErrorCode add_data_to_tablet_i64(Tablet* tablet, int line_id,
+                                 const char* column_name, int64_t value);
+ErrorCode add_data_to_tablet_i32(Tablet* tablet, int line_id,
+                                 const char* column_name, int32_t value);
+ErrorCode add_data_to_tablet_bool(Tablet* tablet, int line_id,
+                                  const char* column_name, bool value);
+ErrorCode add_data_to_tablet_float(Tablet* tablet, int line_id,
+                                   const char* column_name, float value);
+ErrorCode add_data_to_tablet_double(Tablet* tablet, int line_id,
+                                    const char* column_name, double value);
+ErrorCode add_data_to_tablet_text(Tablet* tablet, int line_id,
+                                  const char* column_name, const char* value);
+
+// free the tablet and all the memory it used.
+ErrorCode destory_tablet(Tablet* tablet);
+
+/* ---------- Row ---------- */
+
+// create a TsFileRowData with the given table name, timestamp and column
+// length. TsFileRowData cantains the data of one device with the same
+// timestamp.
 TsFileRowData create_tsfile_row(const char* tablename, int64_t timestamp,
                                 int column_length);
 
@@ -166,16 +187,87 @@ ErrorCode insert_data_into_tsfile_row_float(TsFileRowData data, char* columname,
 ErrorCode insert_data_into_tsfile_row_double(TsFileRowData data,
                                              char* columname, double value);
 
+/* ---------- TsFile ---------- */
+
+/* -- reader --*/
+
+// Open a TsFile reader with the given file path. If it fails, return NULL and
+// set err_code.
+CTsFileReader ts_reader_open(const char* pathname, ErrorCode* err_code);
+
+// Close the TsFile reader. If it fails, return an error code.
+ErrorCode ts_reader_close(CTsFileReader reader);
+
+// If you need to construct a more complex AND expression that does not only
+// filter a single sequence of time, you can use the following method to
+// construct a complex expression.
+
+TimeFilterExpression* create_andquery_timefilter();
+
+TimeFilterExpression* create_time_filter(const char* table_name,
+                                         const char* column_name,
+                                         OperatorType oper, int64_t timestamp);
+
+TimeFilterExpression* add_time_filter_to_and_query(
+    TimeFilterExpression* exp_and, TimeFilterExpression* exp);
+
+void destory_time_filter_query(TimeFilterExpression* expression);
+
+// Query the data in the TsFile with expression.Return an iterator.
+QueryDataRet ts_reader_query(CTsFileReader reader, const char* table_name,
+                             const char** columns, int colum_num,
+                             TimeFilterExpression* expression);
+
+// Query the data of the measurements in the TsFile with the given time
+// range.Return an iterator.
+QueryDataRet ts_reader_begin_end(CTsFileReader reader, const char* table_name,
+                                 char** columns, int colum_num, timestamp begin,
+                                 timestamp end);
+
+// Query all the data of the measurements in the TsFile. Return an iterator.
+QueryDataRet ts_reader_read(CTsFileReader reader, const char* table_name,
+                            char** columns, int colum_num);
+
+// Get the data from the iterator. If the data is NULL, return NULL.
+// Dataresult is tablet.
+DataResult* ts_next(QueryDataRet data, int expect_line_count);
+
+// print the data in dataresult or tablet.
+void print_data_result(DataResult* result);
+
+// Free the data iterator.
+ErrorCode destory_query_dataret(QueryDataRet query_data_set);
+
+/* -- writer --*/
+
+// Open a TsFile writer with the given file path. If it fails, return NULL and
+// set errcode.
+CTsFileWriter ts_writer_open(const char* pathname, ErrorCode* err_code);
+
+// Open a TsFile writer with the given file path and flag mode.
+// O_CREAT | O_RDWR will add by default.
+// If it fails, return NULL and set errcode.
+CTsFileWriter ts_writer_open_flag(const char* pathname, mode_t flag,
+                                  ErrorCode* err_code);
+
+// Not support yet.
+CTsFileWriter ts_writer_open_conf(const char* pathname, mode_t flag,
+                                  ErrorCode* err_code, TsFileConf* conf);
+
+// create timeseries.
+ErrorCode tsfile_register_table_column(CTsFileWriter writer,
+                                       const char* table_name,
+                                       ColumnSchema* schema);
+
+// create device with multiple timeseries.
+ErrorCode tsfile_register_table(CTsFileWriter writer,
+                                TableSchema* table_shcema);
+
 ErrorCode tsfile_write_row_data(CTsFileWriter writer, TsFileRowData data);
+
+ErrorCode ts_writer_close(CTsFileWriter writer);
+
 ErrorCode destory_tsfile_row(TsFileRowData data);
-
-Tablet* create_tablet(const char* table_name, int max_capacity);
-Tablet* add_column_to_tablet(Tablet* tablet, char* column_name,
-                             SchemaInfo column_def);
-Tablet add_data_to_tablet(Tablet tablet, int line_id, int64_t timestamp,
-                          const char* column_name, int64_t value);
-
-ErrorCode destory_tablet(Tablet* tablet);
 
 ErrorCode tsfile_flush_data(CTsFileWriter writer);
 
@@ -191,44 +283,6 @@ Expression create_column_filter_dval(const char* column_name, OperatorType oper,
                                      double double_value);
 Expression create_column_filter_cval(const char* column_name, OperatorType oper,
                                      const char* char_value);
-
-TimeFilterExpression* create_andquery_timefilter();
-
-TimeFilterExpression* create_time_filter(const char* table_name,
-                                         const char* column_name,
-                                         OperatorType oper, int64_t timestamp);
-
-TimeFilterExpression* add_time_filter_to_and_query(
-    TimeFilterExpression* exp_and, TimeFilterExpression* exp);
-
-void destory_time_filter_query(TimeFilterExpression* expression);
-
-Expression* create_time_expression(const char* column_name, OperatorType oper,
-                                   int64_t timestamp);
-
-Expression* add_and_filter_to_and_query(Expression* exp_and, Expression* exp);
-
-QueryDataRet ts_reader_query(CTsFileReader reader, const char* table_name,
-                             const char** columns, int colum_num,
-                             TimeFilterExpression* expression);
-
-QueryDataRet ts_reader_begin_end(CTsFileReader reader, const char* table_name,
-                                 char** columns, int colum_num, timestamp begin,
-                                 timestamp end);
-
-QueryDataRet ts_reader_read(CTsFileReader reader, const char* table_name,
-                            char** columns, int colum_num);
-
-ErrorCode destory_query_dataret(QueryDataRet query_data_set);
-
-DataResult* ts_next(QueryDataRet data, int expect_line_count);
-
-void print_data_result(DataResult* result);
-
-void clean_data_record(DataResult data_result);
-void clean_query_ret(QueryDataRet query_data_set);
-void clean_query_tree(Expression* expression);
-
 #ifdef __cplusplus
 }
 #endif

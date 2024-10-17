@@ -59,13 +59,21 @@ static bool is_init = false;
             }                                                               \
         }                                                                   \
         if (column_id == -1) {                                              \
-            return tablet;                                                  \
+            return common::E_NOT_EXIST;                                     \
         }                                                                   \
-        if (tablet->cur_num + 1 > tablet->max_capacity) {                   \
-            return tablet;                                                  \
-        }                                                                   \
-        tablet->times[line_id] = timestamp;                                 \
     } while (0)
+
+#define ADD_DATA_TO_TABLET(TYPE, SUFFIX)                                    \
+    ErrorCode add_data_to_tablet_##SUFFIX(                                  \
+        Tablet* tablet, int line_id, const char* column_name, TYPE value) { \
+        int column_id = -1;                                                 \
+        INSERT_DATA_TABLET_STEP;                                            \
+        memcpy((TYPE*)tablet->value[column_id] + line_id, &value,           \
+               sizeof(TYPE));                                               \
+        tablet->bitmap[column_id][line_id] = true;                          \
+        return E_OK;                                                        \
+    }
+
 #define TSDataType common::TSDataType
 #define TSEncoding common::TSEncoding
 #define CompressionType common::CompressionType
@@ -76,6 +84,7 @@ static bool is_init = false;
 #define DataPoint storage::DataPoint
 #define E_BUF_NOT_ENOUGH common::E_BUF_NOT_ENOUGH
 
+/* ---------- Schema and msic ---------- */
 TSDataType get_datatype(SchemaInfo schema_info) {
     if (schema_info & TS_TYPE_BOOLEAN) {
         return TSDataType::BOOLEAN;
@@ -140,6 +149,19 @@ void init_tsfile_config() {
         is_init = true;
     }
 }
+
+/* ---------- Tablet ---------- */
+
+ADD_DATA_TO_TABLET(int64_t, i64)
+ADD_DATA_TO_TABLET(int32_t, i32)
+ADD_DATA_TO_TABLET(float, float)
+ADD_DATA_TO_TABLET(double, double)
+ADD_DATA_TO_TABLET(bool, bool)
+ADD_DATA_TO_TABLET(char*, text)
+
+/* ---------- TsFile ---------- */
+
+/* -- reader --*/
 
 CTsFileReader ts_reader_open(const char* pathname, ErrorCode* err_code) {
     init_tsfile_config();
@@ -280,69 +302,6 @@ Tablet* add_column_to_tablet(Tablet* tablet, char* column_name,
         (void**)realloc(tablet->value, tablet->column_num * sizeof(void*));
     tablet->value[tablet->column_num - 1] =
         (void*)malloc(tablet->max_capacity * sizeof(int64_t));
-    return tablet;
-}
-
-Tablet* add_data_to_tablet_i64(Tablet* tablet, int line_id, int64_t timestamp,
-                               const char* column_name, int64_t value) {
-    int column_id = -1;
-    INSERT_DATA_TABLET_STEP;
-    memcpy((int64_t*)tablet->value[column_id] + line_id, &value,
-           sizeof(int64_t));
-    tablet->bitmap[column_id][line_id] = true;
-    line_id > tablet->cur_num ? tablet->cur_num = line_id : 0;
-    return tablet;
-}
-
-Tablet* add_data_to_tablet_i32(Tablet* tablet, int line_id, int64_t timestamp,
-                               const char* column_name, int32_t value) {
-    int column_id = -1;
-    INSERT_DATA_TABLET_STEP;
-    memcpy((int32_t*)tablet->value[column_id] + line_id, &value,
-           sizeof(int32_t));
-    tablet->bitmap[column_id][line_id] = true;
-    line_id > tablet->cur_num ? tablet->cur_num = line_id : 0;
-    return tablet;
-}
-
-Tablet* add_data_to_tablet_float(Tablet* tablet, int line_id, int64_t timestamp,
-                                 const char* column_name, float value) {
-    int column_id = -1;
-    INSERT_DATA_TABLET_STEP;
-    memcpy((float*)tablet->value[column_id] + line_id, &value, sizeof(float));
-    tablet->bitmap[column_id][line_id] = true;
-    line_id > tablet->cur_num ? tablet->cur_num = line_id : 0;
-    return tablet;
-}
-
-Tablet* add_data_to_tablet_double(Tablet* tablet, int line_id,
-                                  int64_t timestamp, const char* column_name,
-                                  double value) {
-    int column_id = -1;
-    INSERT_DATA_TABLET_STEP;
-    memcpy((double*)tablet->value[column_id] + line_id, &value, sizeof(double));
-    tablet->bitmap[column_id][line_id] = true;
-    line_id > tablet->cur_num ? tablet->cur_num = line_id : 0;
-    return tablet;
-}
-
-Tablet* add_data_to_tablet_bool(Tablet* tablet, int line_id, int64_t timestamp,
-                                const char* column_name, bool value) {
-    int column_id = -1;
-    INSERT_DATA_TABLET_STEP;
-    memcpy((bool*)tablet->value[column_id] + line_id, &value, sizeof(bool));
-    tablet->bitmap[column_id][line_id] = true;
-    line_id > tablet->cur_num ? tablet->cur_num = line_id : 0;
-    return tablet;
-}
-
-Tablet* add_data_to_tablet_char(Tablet* tablet, int line_id, int64_t timestamp,
-                                const char* column_name, char* value) {
-    int column_id = -1;
-    INSERT_DATA_TABLET_STEP;
-    memcpy((char*)tablet->value[column_id] + line_id, &value, sizeof(char*));
-    tablet->bitmap[column_id][line_id] = true;
-    line_id > tablet->cur_num ? tablet->cur_num = line_id : 0;
     return tablet;
 }
 
