@@ -65,13 +65,13 @@ endif()
 message("CMAKE DEBUG: CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}")
 
 
-# All libs will store here, including libtsfile, compress-encoding lib.
+# All libs will be stored here, including libtsfile, compress-encoding lib.
 set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
-# TsFile code will store here.
+# TsFile code will be stored here.
 set(PROJECT_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 
-# All include files will install here.
+# All include files will be installed here.
 set(LIBRARY_INCLUDE_DIR ${PROJECT_BINARY_DIR}/include)
 
 add_subdirectory(third_party)

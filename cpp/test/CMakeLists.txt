@@ -20,7 +20,7 @@ cmake_minimum_required(VERSION 3.11)
 project(TsFile_CPP_TEST)
 include(FetchContent)
 
-set(URL_LIST
+set(GTEST_URL_LIST
     "https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip"
     "https://hub.nuaa.cf/google/googletest/archive/refs/tags/release-1.12.1.zip"
     "https://hub.yzuu.cf/google/googletest/archive/refs/tags/release-1.12.1.zip"
@@ -40,7 +40,7 @@ else()
 endif()
 
 if (NOT DOWNLOADED)
-    foreach (URL ${URL_LIST})
+    foreach (URL ${GTEST_URL_LIST})
         message(STATUS "Trying to download from ${URL}")
         file(DOWNLOAD ${URL} "${CMAKE_SOURCE_DIR}/third_party/googletest-release-1.12.1.zip" STATUS DOWNLOAD_STATUS TIMEOUT ${TIMEOUT})
 
