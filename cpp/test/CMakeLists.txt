@@ -20,6 +20,8 @@ cmake_minimum_required(VERSION 3.11)
 project(TsFile_CPP_TEST)
 include(FetchContent)
 
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
 set(GTEST_URL_LIST
     "https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip"
     "https://hub.nuaa.cf/google/googletest/archive/refs/tags/release-1.12.1.zip"
@@ -72,7 +74,7 @@ endif()
 message(STATUS "Adding test configurations...")
 
 set(LIB_TSFILE_SDK_DIR ${PROJECT_BINARY_DIR}/lib)
-message("LIB_TSFILE_SDK_DIR: ${LIBTSFILE_SDK_DIR}")
+message("LIB_TSFILE_SDK_DIR: ${LIB_TSFILE_SDK_DIR}")
 
 include_directories(
     ${LIBRARY_INCLUDE_DIR}
