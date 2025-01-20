@@ -112,7 +112,7 @@ target_link_libraries(
   TsFile_Test
   GTest::gtest_main
   GTest::gmock
-  tsfile
+  tsfile_static
 )
 set_target_properties(TsFile_Test PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${LIB_TSFILE_SDK_DIR})
 

@@ -24,7 +24,7 @@ set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -Wall -Werror")
 message("cmake using: USE_CPP11=${USE_CPP11}")
 
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -D__STDC_FORMAT_MACROS")
 
 if(DEFINED ENV{CXX})
     set(CMAKE_CXX_COMPILER $ENV{CXX})
