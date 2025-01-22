@@ -32,38 +32,15 @@
 #include "utils/errno_define.h"
 #include "writer/tsfile_writer.h"
 
+#define E_OK common::E_OK
+
 #define CONSTRUCT_EXP_INTERNAL(exp, column_name) \
     do {                                         \
         exp.column_name = column_name;           \
-        exp.operatype = oper;                    \
+        exp.operate_type = oper;                    \
         exp.children_length = 0;                 \
     } while (0)
 
-#define INSERT_DATA_TABLET_STEP                                            \
-    do {                                                                   \
-        for (int i = 0; i < tablet->column_num; i++) {                     \
-            if (strcmp(tablet->timeseries_schema[i]->name, column_name) == \
-                0) {                                                       \
-                column_id = i;                                             \
-                break;                                                     \
-            }                                                              \
-        }                                                                  \
-        if (column_id == -1) {                                             \
-            return tablet;                                                 \
-        }                                                                  \
-        if (tablet->cur_num + 1 > tablet->max_capacity) {                  \
-            return tablet;                                                 \
-        }                                                                  \
-        tablet->times[line_id] = timestamp;                                \
-    } while (0)
-
-#define DataType common::TSDataType
-#define Encoding common::TSEncoding
-#define CompressionType common::CompressionType
-#define E_OK common::E_OK
-#define TsRecord storage::TsRecord
-#define DataPoint storage::DataPoint
-#define E_BUF_NOT_ENOUGH common::E_BUF_NOT_ENOUGH
 Expression create_column_filter(const char* column_name, OperatorType oper,
                                 int32_t int32_value) {
     Expression exp;
@@ -191,7 +168,7 @@ void destory_time_filter_query(TimeFilterExpression* expression) {
 
 Expression create_global_time_expression(OperatorType oper, int64_t timestamp) {
     Expression exp;
-    exp.operatype = oper;
+    exp.operate_type = oper;
     exp.expression_type = GLOBALTIME;
     exp.const_condition.value_condition = timestamp;
     exp.const_condition.type = TSDataType::TS_DATATYPE_INT64;

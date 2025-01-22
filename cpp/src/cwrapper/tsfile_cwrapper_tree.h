@@ -57,7 +57,7 @@ typedef struct expression {
     const char* column_name;
     Constant const_condition;
     ExpressionType expression_type;
-    OperatorType operatype;
+    OperatorType operate_type;
     struct expression* children[MAX_COLUMN_FILTER_NUM];
     int children_length;
 } Expression;
