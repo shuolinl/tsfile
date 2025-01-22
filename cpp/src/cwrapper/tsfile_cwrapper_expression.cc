@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "tsfile_cwrapper_tree.h"
+#include "tsfile_cwrapper_expression.h"
 
 #include "common/global.h"
 #include "reader/expression.h"
@@ -204,15 +204,4 @@ QueryDataRet ts_reader_query(TsFileReader reader, const char* table_name,
         ret->column_names[i] = strdup(columns_name[i]);
     }
     return ret;
-}
-
-ERRNO destory_query_dataret(QueryDataRet data) {
-    storage::ResultSet* qds = (storage::ResultSet*)data->data;
-    delete qds;
-    for (int i = 0; i < data->column_num; i++) {
-        free(data->column_names[i]);
-    }
-    free(data->column_names);
-    free(data);
-    return E_OK;
 }

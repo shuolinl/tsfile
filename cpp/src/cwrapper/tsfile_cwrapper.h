@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#ifndef SRC_CWRAPPER_TSFILE_CWRAPPER_H_
+#define SRC_CWRAPPER_TSFILE_CWRAPPER_H_
 #include <iostream>
 
 typedef enum {
@@ -58,7 +60,7 @@ typedef enum {
     TS_COMPRESSION_INVALID = 255
 } CompressionType;
 
-typedef enum column_category { TAG, FIELD, ATTRIBUTE } ColumnCategory;
+typedef enum column_category { TAG = 0, FIELD = 1 } ColumnCategory;
 
 typedef struct column_schema {
     char* column_name;
@@ -107,8 +109,13 @@ typedef void* ResultSet;
 typedef int32_t ERRNO;
 typedef int64_t timestamp;
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Tablet API
-Tablet tablet_new(const char* device_id, const char** column_name_list,
+Tablet tablet_new_with_device(const char* device_id, const char** column_name_list,
                   TSDataType* data_types, uint32_t column_num);
 
 Tablet tablet_new(const char** column_name_list, TSDataType* data_types,
@@ -116,30 +123,28 @@ Tablet tablet_new(const char** column_name_list, TSDataType* data_types,
 
 uint32_t tablet_get_cur_row_size(Tablet tablet);
 
-void tablet_set_cur_row_size(Tablet tablet, uint32_t size);
-
 ERRNO tablet_add_timestamp(Tablet tablet, uint32_t row_index,
                            timestamp timestamp);
 
-#define tablet_add_value_by_name_(type)                                       \
+#define tablet_add_value_by_name_dec(type)                                       \
     ERRNO tablet_add_value_by_name_##type(Tablet* tablet, uint32_t row_index, \
                                           char* column_name, type value);
 
-tablet_add_value_by_name_(int32_t);
-tablet_add_value_by_name_(int64_t);
-tablet_add_value_by_name_(float);
-tablet_add_value_by_name_(double);
-tablet_add_value_by_name_(bool);
+tablet_add_value_by_name_dec(int32_t);
+tablet_add_value_by_name_dec(int64_t);
+tablet_add_value_by_name_dec(float);
+tablet_add_value_by_name_dec(double);
+tablet_add_value_by_name_dec(bool);
 
-#define table_add_value_by_index_(type)                                        \
+#define table_add_value_by_index_dec(type)                                        \
     ERRNO tablet_add_value_by_index_##type(Tablet* tablet, uint32_t row_index, \
                                            uint32_t column_index, type value);
 
-table_add_value_by_index_(int32_t);
-table_add_value_by_index_(int64_t);
-table_add_value_by_index_(float);
-table_add_value_by_index_(double);
-table_add_value_by_index_(bool);
+table_add_value_by_index_dec(int32_t);
+table_add_value_by_index_dec(int64_t);
+table_add_value_by_index_dec(float);
+table_add_value_by_index_dec(double);
+table_add_value_by_index_dec(bool);
 
 void* tablet_get_value(Tablet tablet, uint32_t row_index, uint32_t schema_index,
                        TSDataType& type);
@@ -182,10 +187,10 @@ ERRNO tsfile_writer_flush_data(TsFileWriter writer);
 ERRNO tsfile_writer_close(TsFileWriter writer);
 
 // query
-ResultSet tsfile_reader_query(TsFileReader reader, char* table_name,
+ResultSet tsfile_reader_query_table(TsFileReader reader, char* table_name,
                               char** columns, uint32_t column_num,
                               timestamp start_time, timestamp end_time);
-ResultSet tsfile_reader_query(TsFileReader reader, char** path_list,
+ResultSet tsfile_reader_query_path(TsFileReader reader, char** path_list,
                               uint32_t path_num, timestamp start_time,
                               timestamp end_time);
 bool tsfile_result_set_has_next(ResultSet result_set);
@@ -238,3 +243,8 @@ TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
 
 // destroy pointer
 ERRNO delete_tsfile_ts_record(TsRecord record);
+
+#ifdef __cplusplus
+}
+#endif
+#endif  // CWRAPPER_TSFILE_CWRAPPER_H

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "tsfile_cwrapper_common.h"
+#include "tsfile_cwrapper.h"
 
 #include <reader/result_set.h>
 
@@ -61,17 +61,13 @@ uint32_t tablet_get_cur_row_size(Tablet tablet) {
     return static_cast<storage::Tablet *>(tablet)->get_cur_row_size();
 }
 
-void tablet_set_cur_row_size(Tablet tablet, uint32_t size) {
-    static_cast<storage::Tablet *>(tablet)->set_row_size(size);
-}
-
 ERRNO tablet_add_timestamp(Tablet tablet, uint32_t row_index,
                            timestamp timestamp) {
     return static_cast<storage::Tablet *>(tablet)->add_timestamp(row_index,
                                                                  timestamp);
 }
 
-#define tablet_add_value_by_name_(type)                                      \
+#define tablet_add_value_by_name_def(type)                                   \
     ERRNO tablet_add_value_by_name_##type(Tablet tablet, uint32_t row_index, \
                                           const char *column_name,           \
                                           type value) {                      \
@@ -79,13 +75,13 @@ ERRNO tablet_add_timestamp(Tablet tablet, uint32_t row_index,
             row_index, column_name, value);                                  \
     }
 
-tablet_add_value_by_name_(int32_t);
-tablet_add_value_by_name_(int64_t);
-tablet_add_value_by_name_(float);
-tablet_add_value_by_name_(double);
-tablet_add_value_by_name_(bool);
+tablet_add_value_by_name_def(int32_t);
+tablet_add_value_by_name_def(int64_t);
+tablet_add_value_by_name_def(float);
+tablet_add_value_by_name_def(double);
+tablet_add_value_by_name_def(bool);
 
-#define table_add_value_by_index_(type)                                       \
+#define table_add_value_by_index_def(type)                                    \
     ERRNO tablet_add_value_by_index_##type(Tablet tablet, uint32_t row_index, \
                                            uint32_t column_index,             \
                                            type value) {                      \
@@ -93,11 +89,11 @@ tablet_add_value_by_name_(bool);
             row_index, column_index, value);                                  \
     }
 
-table_add_value_by_index_(int32_t);
-table_add_value_by_index_(int64_t);
-table_add_value_by_index_(float);
-table_add_value_by_index_(double);
-table_add_value_by_index_(bool);
+table_add_value_by_index_def(int32_t);
+table_add_value_by_index_def(int64_t);
+table_add_value_by_index_def(float);
+table_add_value_by_index_def(double);
+table_add_value_by_index_def(bool);
 
 void *tablet_get_value(Tablet tablet, uint32_t row_index, uint32_t schema_index,
                        TSDataType *type) {
@@ -116,7 +112,7 @@ TsRecord ts_record_new(const char *device_name, int64_t timestamp,
     return record;
 }
 
-#define insert_data_into_ts_record_by_name_(type)                    \
+#define insert_data_into_ts_record_by_name_def(type)                 \
     ERRNO insert_data_into_ts_record_by_name##type(                  \
         TsRecord data, const char *measurement_name, type value) {   \
         auto *record = (storage::TsRecord *)data;                    \
@@ -127,11 +123,11 @@ TsRecord ts_record_new(const char *device_name, int64_t timestamp,
         return common::E_OK;                                         \
     }
 
-insert_data_into_ts_record_by_name_(int32_t);
-insert_data_into_ts_record_by_name_(int64_t);
-insert_data_into_ts_record_by_name_(bool);
-insert_data_into_ts_record_by_name_(float);
-insert_data_into_ts_record_by_name_(double);
+insert_data_into_ts_record_by_name_def(int32_t);
+insert_data_into_ts_record_by_name_def(int64_t);
+insert_data_into_ts_record_by_name_def(bool);
+insert_data_into_ts_record_by_name_def(float);
+insert_data_into_ts_record_by_name_def(double);
 
 void init_tsfile_config() {
     if (!is_init) {
@@ -196,18 +192,19 @@ ERRNO tsfile_reader_close(TsFileReader reader) {
 }
 
 void tsfile_writer_register_table(TsFileWriter writer, TableSchema *schema) {
-    std::vector<storage::MeasurementSchema> measurement_schemas;
-    std::vector<ColumnCategory> column_categories;
+    std::vector<storage::MeasurementSchema *> measurement_schemas;
+    std::vector<storage::ColumnCategory> column_categories;
+    measurement_schemas.resize(schema->column_num);
     for (int i = 0; i < schema->column_num; i++) {
         ColumnSchema *cur_schema = schema->column_schemas + i;
-        measurement_schemas.emplace_back(
-            cur_schema->column_name,
+        measurement_schemas[i] = new storage::MeasurementSchema(cur_schema->column_name,
             static_cast<common::TSDataType>(cur_schema->data_type));
-        column_categories.push_back(cur_schema->column_category);
+        column_categories.push_back(
+            static_cast<storage::ColumnCategory>(cur_schema->column_category));
     }
     auto tsfile_writer = static_cast<storage::TsFileWriter *>(writer);
-    // tsfile_writer->register_table(new TableSchema(schema->table_name,
-    // measurement_schemas));
+    tsfile_writer->register_table(std::make_shared<storage::TableSchema>(
+        schema->table_name, measurement_schemas, column_categories));
 }
 
 ERRNO tsfile_register_timeseries(TsFileWriter writer, const char *device_name,
@@ -264,9 +261,9 @@ ERRNO tsfile_writer_flush_data(TsFileWriter writer) {
 
 // Query
 
-ResultSet tsfile_reader_query(TsFileReader reader, char *table_name,
-                              char **columns, uint32_t column_num,
-                              timestamp start_time, timestamp end_time) {
+ResultSet tsfile_reader_query_table(TsFileReader reader, char *table_name,
+                                    char **columns, uint32_t column_num,
+                                    timestamp start_time, timestamp end_time) {
     auto *r = static_cast<storage::TsFileReader *>(reader);
     std::string table_name_str(table_name);
     std::vector<std::string> selected_paths;
@@ -279,9 +276,9 @@ ResultSet tsfile_reader_query(TsFileReader reader, char *table_name,
     return qds;
 }
 
-ResultSet tsfile_reader_query(TsFileReader reader, char **path_list,
-                              uint32_t path_num, timestamp start_time,
-                              timestamp end_time) {
+ResultSet tsfile_reader_query_path(TsFileReader reader, char **path_list,
+                                   uint32_t path_num, timestamp start_time,
+                                   timestamp end_time) {
     auto *r = static_cast<storage::TsFileReader *>(reader);
     std::vector<std::string> selected_paths;
     for (int i = 0; i < path_num; i++) {
@@ -292,56 +289,56 @@ ResultSet tsfile_reader_query(TsFileReader reader, char **path_list,
     return qds;
 }
 
-#define tsfile_result_set_get_value_by_name_(type)                       \
-    type tsfile_result_set_get_value_by_name##type(ResultSet result_set, \
-                                                   char *column_name) {  \
-        auto *r = static_cast<storage::ResultSet *>(result_set);         \
-        return r->get_value<type>(column_name);                          \
+#define tsfile_result_set_get_value_by_name_def(type)                         \
+    type tsfile_result_set_get_value_by_name##type(ResultSet result_set,      \
+                                                   const char *column_name) { \
+        auto *r = static_cast<storage::ResultSet *>(result_set);              \
+        return r->get_value<type>(column_name);                               \
     }
-tsfile_result_set_get_value_by_name_(bool);
-tsfile_result_set_get_value_by_name_(int32_t);
-tsfile_result_set_get_value_by_name_(int64_t);
-tsfile_result_set_get_value_by_name_(float);
-tsfile_result_set_get_value_by_name_(double);
+tsfile_result_set_get_value_by_name_def(bool);
+tsfile_result_set_get_value_by_name_def(int32_t);
+tsfile_result_set_get_value_by_name_def(int64_t);
+tsfile_result_set_get_value_by_name_def(float);
+tsfile_result_set_get_value_by_name_def(double);
 
-#define tsfile_result_set_get_value_by_index_(type)                           \
+#define tsfile_result_set_get_value_by_index_def(type)                        \
     type tsfile_result_set_get_value_by_index_##type(ResultSet result_set,    \
                                                      uint32_t column_index) { \
         auto *r = static_cast<storage::ResultSet *>(result_set);              \
         return r->get_value<type>(column_index);                              \
     }
 
-tsfile_result_set_get_value_by_index_(int32_t);
-tsfile_result_set_get_value_by_index_(int64_t);
-tsfile_result_set_get_value_by_index_(float);
-tsfile_result_set_get_value_by_index_(double);
-tsfile_result_set_get_value_by_index_(bool);
+tsfile_result_set_get_value_by_index_def(int32_t);
+tsfile_result_set_get_value_by_index_def(int64_t);
+tsfile_result_set_get_value_by_index_def(float);
+tsfile_result_set_get_value_by_index_def(double);
+tsfile_result_set_get_value_by_index_def(bool);
 
-#define tsfile_result_set_is_null_by_name_(type)                        \
-    bool tsfile_result_set_is_null_by_name_##type(ResultSet result_set, \
-                                                  char *column_name) {  \
-        auto *r = static_cast<storage::ResultSet *>(result_set);        \
-        return r->is_null(column_name);                                 \
+#define tsfile_result_set_is_null_by_name_def(type)                          \
+    bool tsfile_result_set_is_null_by_name_##type(ResultSet result_set,      \
+                                                  const char *column_name) { \
+        auto *r = static_cast<storage::ResultSet *>(result_set);             \
+        return r->is_null(column_name);                                      \
     }
 
-tsfile_result_set_is_null_by_name_(bool);
-tsfile_result_set_is_null_by_name_(int32_t);
-tsfile_result_set_is_null_by_name_(int64_t);
-tsfile_result_set_is_null_by_name_(float);
-tsfile_result_set_is_null_by_name_(double);
+tsfile_result_set_is_null_by_name_def(bool);
+tsfile_result_set_is_null_by_name_def(int32_t);
+tsfile_result_set_is_null_by_name_def(int64_t);
+tsfile_result_set_is_null_by_name_def(float);
+tsfile_result_set_is_null_by_name_def(double);
 
-#define tsfile_result_set_is_null_by_index_(type)                           \
+#define tsfile_result_set_is_null_by_index_def(type)                        \
     bool tsfile_result_set_is_null_by_index_##type(ResultSet result_set,    \
                                                    uint32_t column_index) { \
         auto *r = static_cast<storage::ResultSet *>(result_set);            \
         return r->is_null(column_index);                                    \
     }
 
-tsfile_result_set_is_null_by_index_(bool);
-tsfile_result_set_is_null_by_index_(int32_t);
-tsfile_result_set_is_null_by_index_(int64_t);
-tsfile_result_set_is_null_by_index_(float);
-tsfile_result_set_is_null_by_index_(double);
+tsfile_result_set_is_null_by_index_def(bool);
+tsfile_result_set_is_null_by_index_def(int32_t);
+tsfile_result_set_is_null_by_index_def(int64_t);
+tsfile_result_set_is_null_by_index_def(float);
+tsfile_result_set_is_null_by_index_def(double);
 
 ResultSetMetaData tsfile_result_set_get_metadata(ResultSet result_set) {
     auto *r = static_cast<storage::ResultSet *>(result_set);
@@ -383,7 +380,8 @@ TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
                                            const char *table_name) {
     auto *r = static_cast<storage::TsFileReader *>(reader);
     std::vector<storage::MeasurementSchema> schemas;
-    r->get_timeseries_schema(std::make_shared<storage::StringArrayDeviceID>(table_name), schemas);
+    r->get_timeseries_schema(
+        std::make_shared<storage::StringArrayDeviceID>(table_name), schemas);
     TableSchema schema;
     schema.table_name = strdup(table_name);
     schema.column_num = schemas.size();
@@ -391,7 +389,7 @@ TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
         malloc(sizeof(ColumnSchema) * schema.column_num));
 
     for (uint32_t i = 0; i < schemas.size(); i++) {
-        schema.column_schemas[i].column_category = ATTRIBUTE;
+        schema.column_schemas[i].column_category = FIELD;
         schema.column_schemas[i].column_name =
             strdup(schemas[i].measurement_name_.c_str());
         schema.column_schemas[i].data_type =
@@ -400,20 +398,23 @@ TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
     return schema;
 }
 
-TableSchema *tsfile_reader_get_all_table_schemas(TsFileReader reader, const char* table_name,
+TableSchema *tsfile_reader_get_all_table_schemas(TsFileReader reader,
+                                                 const char *table_name,
                                                  uint32_t *num) {
     auto *r = static_cast<storage::TsFileReader *>(reader);
-    std::vector<std::shared_ptr<storage::IDeviceID>> devices = r->get_all_devices(table_name);
+    std::vector<std::shared_ptr<storage::IDeviceID>> devices =
+        r->get_all_devices(table_name);
     *num = devices.size();
     TableSchema *schemas = static_cast<TableSchema *>(
         malloc(sizeof(TableSchema) * devices.size()));
     std::vector<storage::MeasurementSchema> measurement_schemas;
     for (uint32_t i = 0; i < devices.size(); i++) {
         r->get_timeseries_schema(devices[i], measurement_schemas);
-        schemas[i].table_name = strdup(devices[i].get()->get_table_name().c_str());
+        schemas[i].table_name =
+            strdup(devices[i].get()->get_table_name().c_str());
         schemas[i].column_num = measurement_schemas.size();
         for (int j = 0; j < measurement_schemas.size(); j++) {
-            schemas[i].column_schemas[j].column_category = ATTRIBUTE;
+            schemas[i].column_schemas[j].column_category = FIELD;
             schemas[i].column_schemas[j].column_name =
                 strdup(measurement_schemas[j].measurement_name_.c_str());
             schemas[i].column_schemas[j].data_type =

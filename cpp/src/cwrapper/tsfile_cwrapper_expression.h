@@ -28,7 +28,7 @@
 #include <sys/stat.h>
 #endif
 
-#include "tsfile_cwrapper_common.h"
+#include "tsfile_cwrapper.h"
 
 typedef void* TimeFilterExpression;
 
@@ -95,9 +95,6 @@ Expression* add_and_filter_to_and_query(Expression* exp_and, Expression* exp);
 QueryDataRet ts_reader_query(TsFileReader reader, const char* table_name,
                              const char** columns, int colum_num,
                              TimeFilterExpression* expression);
-
-QueryDataRet ts_reader_read(TsFileReader reader, const char* table_name,
-                            char** columns, int colum_num);
 
 
 #ifdef __cplusplus
