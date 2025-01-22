@@ -184,7 +184,6 @@ ERRNO tsfile_writer_write_ts_record(TsFileWriter writer, TsRecord record);
 
 // flush data
 ERRNO tsfile_writer_flush_data(TsFileWriter writer);
-ERRNO tsfile_writer_close(TsFileWriter writer);
 
 // query
 ResultSet tsfile_reader_query_table(TsFileReader reader, char* table_name,
@@ -247,4 +246,4 @@ ERRNO delete_tsfile_ts_record(TsRecord record);
 #ifdef __cplusplus
 }
 #endif
-#endif  // CWRAPPER_TSFILE_CWRAPPER_H
+#endif  // SRC_CWRAPPER_TSFILE_CWRAPPER_H_

@@ -19,8 +19,6 @@ under the License.
 include(FetchContent)
 
 set(URL_LIST
-    "https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip"
-    "https://hub.nuaa.cf/google/googletest/archive/refs/tags/release-1.12.1.zip"
     "https://hub.yzuu.cf/google/googletest/archive/refs/tags/release-1.12.1.zip"
 )
 
@@ -75,6 +73,7 @@ file(GLOB_RECURSE TEST_SRCS
         "compress/*_test.cc"
         "reader/*_test.cc"
         "writer/*_test.cc"
+        "cwrapper/*_test.cc"
         )
 if (${COV_ENABLED})
     message("Enable code cov...")

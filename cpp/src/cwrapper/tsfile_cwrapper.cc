@@ -17,17 +17,14 @@
  * under the License.
  */
 
-#include "tsfile_cwrapper.h"
-
-#include <reader/result_set.h>
-
-#include <iomanip>
+#include "cwrapper/tsfile_cwrapper.h"
 
 #include "common/global.h"
 #include "common/tablet.h"
-#include "reader/expression.h"
+#include "reader/result_set.h"
 #include "reader/tsfile_reader.h"
 #include "writer/tsfile_writer.h"
+
 static bool is_init = false;
 
 Tablet tablet_new(const char *device_id, const char **column_name_list,
