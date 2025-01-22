@@ -96,21 +96,9 @@ QueryDataRet ts_reader_query(TsFileReader reader, const char* table_name,
                              const char** columns, int colum_num,
                              TimeFilterExpression* expression);
 
-QueryDataRet ts_reader_begin_end(TsFileReader reader, const char* table_name,
-                                 char** columns, int colum_num, timestamp begin,
-                                 timestamp end);
-
 QueryDataRet ts_reader_read(TsFileReader reader, const char* table_name,
                             char** columns, int colum_num);
 
-ERRNO destroy_query_data_ret(QueryDataRet query_data_set);
-
-DataResult* ts_next(QueryDataRet data, int expect_line_count);
-
-void print_data_result(DataResult* result);
-
-void clean_data_record(DataResult data_result);
-void clean_query_ret(QueryDataRet query_data_set);
 
 #ifdef __cplusplus
 }
