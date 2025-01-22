@@ -48,9 +48,11 @@ class TsFileReader {
     void destroy_query_data_set(ResultSet *qds);
     ResultSet *read_timeseries(const std::shared_ptr<IDeviceID>& device_id,
                                const std::vector<std::string>& measurement_name);
+    std::vector<std::string> get_all_tables();
     std::vector<std::shared_ptr<IDeviceID>> get_all_devices(std::string table_name);
     int get_timeseries_schema(std::shared_ptr<IDeviceID> device_id,
                               std::vector<MeasurementSchema> &result);
+
 
    private:
     int get_all_devices(std::vector<std::shared_ptr<IDeviceID>> &device_ids,

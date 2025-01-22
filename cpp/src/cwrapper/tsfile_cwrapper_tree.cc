@@ -19,11 +19,8 @@
 
 #include "tsfile_cwrapper_tree.h"
 
-#include <iomanip>
-
 #include "common/global.h"
 #include "reader/expression.h"
-#include "reader/filter/and_filter.h"
 #include "reader/filter/filter.h"
 #include "reader/filter/time_filter.h"
 #include "reader/filter/time_operator.h"

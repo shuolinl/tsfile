@@ -383,7 +383,7 @@ TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
                                            const char *table_name) {
     auto *r = static_cast<storage::TsFileReader *>(reader);
     std::vector<storage::MeasurementSchema> schemas;
-    r->get_timeseries_schema(table_name, schemas);
+    r->get_timeseries_schema(std::make_shared<storage::StringArrayDeviceID>(table_name), schemas);
     TableSchema schema;
     schema.table_name = strdup(table_name);
     schema.column_num = schemas.size();
@@ -400,17 +400,17 @@ TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
     return schema;
 }
 
-TableSchema *tsfile_reader_get_all_table_schemas(TsFileReader reader,
+TableSchema *tsfile_reader_get_all_table_schemas(TsFileReader reader, const char* table_name,
                                                  uint32_t *num) {
     auto *r = static_cast<storage::TsFileReader *>(reader);
-    std::vector<std::string> devices = r->get_all_devices();
+    std::vector<std::shared_ptr<storage::IDeviceID>> devices = r->get_all_devices(table_name);
     *num = devices.size();
     TableSchema *schemas = static_cast<TableSchema *>(
         malloc(sizeof(TableSchema) * devices.size()));
     std::vector<storage::MeasurementSchema> measurement_schemas;
     for (uint32_t i = 0; i < devices.size(); i++) {
-        r->get_timeseries_schema(devices[i].c_str(), measurement_schemas);
-        schemas[i].table_name = strdup(devices[i].c_str());
+        r->get_timeseries_schema(devices[i], measurement_schemas);
+        schemas[i].table_name = strdup(devices[i].get()->get_table_name().c_str());
         schemas[i].column_num = measurement_schemas.size();
         for (int j = 0; j < measurement_schemas.size(); j++) {
             schemas[i].column_schemas[j].column_category = ATTRIBUTE;
