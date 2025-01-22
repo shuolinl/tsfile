@@ -15,12 +15,25 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# from .tsfile_dataframe import read_tsfile, write_tsfile
-from .constants import *
-from .schema import *
-from .row_record import *
-from .tablet import *
-from .field import *
-from .date_utils import *
-from .tsfile_reader import TsFileReaderPy as TsFileReader, ResultSetPy as ResultSet
-from .tsfile_writer import TsFileWriterPy as TsFileWriter
+
+
+class BitMap(object):
+    BIT_UTIL = [1, 1 << 1, 1 << 2, 1 << 3, 1 << 4, 1 << 5, 1 << 6, 1 << 7]
+
+    def __init__(self, size):
+        self.__size = size
+        self.bits = []
+        for i in range(size // 8 + 1):
+            self.bits.append(0)
+
+    def mark(self, position):
+        self.bits[position // 8] |= BitMap.BIT_UTIL[position % 8]
+
+    def is_all_unmarked(self):
+        for i in range(self.__size // 8):
+            if self.bits[i] != 0:
+                return False
+        for i in range(self.__size % 8):
+            if (self.bits[self.__size // 8] & BitMap.BIT_UTIL[i]) != 0:
+                return False
+        return True

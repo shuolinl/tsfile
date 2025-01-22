@@ -15,12 +15,53 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# from .tsfile_dataframe import read_tsfile, write_tsfile
-from .constants import *
-from .schema import *
-from .row_record import *
-from .tablet import *
-from .field import *
-from .date_utils import *
-from .tsfile_reader import TsFileReaderPy as TsFileReader, ResultSetPy as ResultSet
-from .tsfile_writer import TsFileWriterPy as TsFileWriter
+
+from enum import unique, IntEnum
+
+@unique
+class TSDataType(IntEnum):
+    BOOLEAN = 0
+    INT32 = 1
+    INT64 = 2
+    FLOAT = 3
+    DOUBLE = 4
+    TEXT = 5
+    TIMESTAMP = 8
+    DATE = 9
+    BLOB = 10
+    STRING = 11
+
+@unique
+class TSEncoding(IntEnum):
+    PLAIN = 0
+    DICTIONARY = 1
+    RLE = 2
+    DIFF = 3
+    TS_2DIFF = 4
+    BITMAP = 5
+    GORILLA_V1 = 6
+    REGULAR = 7
+    GORILLA = 8
+    ZIGZAG = 9
+    CHIMP = 11
+    SPRINTZ = 12
+    RLBE = 13
+
+
+@unique
+class Compressor(IntEnum):
+    UNCOMPRESSED = 0
+    SNAPPY = 1
+    GZIP = 2
+    LZO = 3
+    SDT = 4
+    PAA = 5
+    PLA = 6
+    LZ4 = 7
+    ZSTD = 8
+    LZMA2 = 9
+
+@unique
+class Category(IntEnum):
+    TAG = 0
+    FIELD = 1

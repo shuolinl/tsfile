@@ -23,7 +23,7 @@ import pandas as pd
 from cpython.bytes cimport PyBytes_AsString
 cimport numpy as cnp
 import numpy as np
-from .tsfile cimport *
+from tsfile.tsfile_cpp cimport *
 
 TIMESTAMP_STR = "Time"
 TS_TYPE_INT32 = 1 << 8
@@ -47,8 +47,7 @@ cdef class tsfile_reader:
     cdef QueryDataRet ret
     cdef int batch_size
     cdef bint read_all_at_once
-    
-    
+
 
     def __init__(self, pathname, table_name, columns, start_time=None, end_time=None, batch_size=None):
         self.open_reader(pathname)

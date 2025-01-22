@@ -26,7 +26,7 @@ import pandas as pd
 
 
 import tsfile as ts
-from tsfile.tsfile import EmptyFileError
+from tsfile.tsfile_dataframe import EmptyFileError
 
 TABLE_NAME = "test_table"
 DATA_PATH = os.path.join(os.path.dirname(__file__), "target")

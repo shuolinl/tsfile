@@ -52,33 +52,65 @@ def copy_header(source, target):
     if os.path.exists(source):
         shutil.copyfile(source, target)
 
+# source_include_dir = os.path.join(
+#     project_dir, "..", "cpp", "c_include", "cwrapper", "TsFile-cwrapper.h"
+# )
+# target_include_dir = os.path.join(project_dir, "tsfile", "TsFile-cwrapper.h")
+# copy_header(source_include_dir, target_include_dir)
+
+# if system == "Darwin":
+#     copy_lib_files(libtsfile_shard_dir, libtsfile_dir, version + ".dylib")
+# elif system == "Linux":
+#     copy_lib_files(libtsfile_shard_dir, libtsfile_dir, "so." + version)
+# else:
+#     copy_lib_files(libtsfile_shard_dir, libtsfile_dir, "dll")
 
 project_dir = os.path.dirname(os.path.abspath(__file__))
 
 libtsfile_shard_dir = os.path.join(project_dir, "..", "cpp", "target", "build", "lib")
 libtsfile_dir = os.path.join(project_dir, "tsfile")
+
+source_file = [
+    # os.path.join("tsfile", "tsfile_pywrapper.pyx"),
+    os.path.join("tsfile", "tsfile_reader.pyx"),
+    os.path.join("tsfile", "tsfile_writer.pyx")
+]
+
+
+
 include_dir = os.path.join(project_dir, "tsfile")
-source_file = os.path.join("tsfile", "tsfile_pywrapper.pyx")
-
-source_include_dir = os.path.join(
-    project_dir, "..", "cpp", "src", "cwrapper", "TsFile-cwrapper.h"
-)
-target_include_dir = os.path.join(project_dir, "tsfile", "TsFile-cwrapper.h")
-copy_header(source_include_dir, target_include_dir)
-
-if system == "Darwin":
-    copy_lib_files(libtsfile_shard_dir, libtsfile_dir, version + ".dylib")
-elif system == "Linux":
-    copy_lib_files(libtsfile_shard_dir, libtsfile_dir, "so." + version)
-else:
-    copy_lib_files(libtsfile_shard_dir, libtsfile_dir, "dll")
-
 ext_modules_tsfile = [
     Extension(
-        "tsfile.tsfile_pywrapper",
-        sources=[source_file],
+        "tsfile.tsfile_py_cpp",
+        sources=[os.path.join("tsfile", "tsfile_py_cpp.pyx")],
         libraries=["tsfile"],
         library_dirs=[libtsfile_dir],
+        include_dirs=[include_dir, np.get_include()],
+        runtime_library_dirs=[libtsfile_dir] if system != "Windows" else None,
+        extra_compile_args=(
+            ["-std=c++11"] if system != "Windows" else ["-std=c++11", "-DMS_WIN64"]
+        ),
+        language="c++",
+    ),
+    Extension(
+        "tsfile.tsfile_reader",
+        sources=[os.path.join("tsfile", "tsfile_reader.pyx")],
+        libraries=["tsfile"],
+        library_dirs=[libtsfile_dir],
+        depends=[os.path.join("tsfile", "tsfile_py_cpp.pxd")],
+        include_dirs=[include_dir, np.get_include()],
+        runtime_library_dirs=[libtsfile_dir] if system != "Windows" else None,
+        extra_compile_args=(
+            ["-std=c++11"] if system != "Windows" else ["-std=c++11", "-DMS_WIN64"]
+        ),
+        language="c++",
+    ),
+    Extension(
+        "tsfile.tsfile_writer",
+        sources=[os.path.join("tsfile", "tsfile_writer.pyx")],
+        libraries=["tsfile"],
+        library_dirs=[libtsfile_dir],
+        depends=[os.path.join("tsfile", "tsfile_py_cpp.pxd")],
         include_dirs=[include_dir, np.get_include()],
         runtime_library_dirs=[libtsfile_dir] if system != "Windows" else None,
         extra_compile_args=(
@@ -113,9 +145,12 @@ setup(
     ext_modules=cythonize(ext_modules_tsfile),
     cmdclass={"build_ext": BuildExt},
     include_dirs=[np.get_include()],
+    package_dir={"tsfile": "./tsfile"},
     package_data={
         "tsfile": [
             "libtsfile.*",
+            "_tsfile.so",
+            "*.pxd"
         ]
     },
     include_package_data=True,
