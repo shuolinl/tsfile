@@ -39,6 +39,9 @@ class ResultSetMetadata {
         ASSERT(column_index >= 0 && column_index < column_names_.size());
         return column_names_[column_index];
     }
+    uint32_t get_column_count() {
+        return column_names_.size();
+    }
 
    private:
     std::vector<std::string> column_names_;
