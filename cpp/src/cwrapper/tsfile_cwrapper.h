@@ -221,14 +221,21 @@ bool tsfile_result_set_is_null_by_index(ResultSet result_set,
 
 ResultSetMetaData tsfile_result_set_get_metadata(ResultSet result_set);
 
+
 // Desc Table Schema
 
 TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
                                            const char* table_name);
+DeviceSchema tsfile_reader_get_timeseries_schema(TsFileReader reader, const char* device_id);
 
 // destroy pointer
 ERRNO destroy_tsfile_ts_record(TsRecord record);
 ERRNO destroy_tablet(Tablet tablet);
+void destroy_tsfile_result_set(ResultSet result_set);
+void destroy_device_schema(DeviceSchema schema);
+void destroy_timeseries_schema(TimeseriesSchema schema);
+void destroy_table_schema(TableSchema schema);
+void destroy_column_schema(ColumnSchema schema);
 
 #ifdef __cplusplus
 }

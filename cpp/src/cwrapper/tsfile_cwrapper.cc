@@ -391,6 +391,25 @@ TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
     return schema;
 }
 
+DeviceSchema tsfile_reader_get_timeseries_schema(TsFileReader reader,
+                                                     const char *device_id) {
+    auto *r = static_cast<storage::TsFileReader *>(reader);
+    std::vector<storage::MeasurementSchema> measurement_schemas;
+    r->get_timeseries_schema(std::make_shared<storage::StringArrayDeviceID>(device_id), measurement_schemas);
+    DeviceSchema schema;
+    schema.device_name = strdup(device_id);
+    schema.timeseries_num = measurement_schemas.size();
+    schema.timeseries_schema = static_cast<TimeseriesSchema *>(malloc(sizeof(TimeseriesSchema)* schema.timeseries_num));
+    for (uint32_t i = 0; i < schema.timeseries_num; i++) {
+        schema.timeseries_schema[i].name = strdup(measurement_schemas[i].measurement_name_.c_str());
+        schema.timeseries_schema[i].data_type = static_cast<TSDataType>(measurement_schemas[i].data_type_);
+        schema.timeseries_schema[i].compression = static_cast<CompressionType>(measurement_schemas[i].compression_type_);
+        schema.timeseries_schema[i].encoding = static_cast<TSEncoding>(measurement_schemas[i].encoding_);
+    }
+    return schema;
+}
+
+
 TableSchema *tsfile_reader_get_all_table_schemas(TsFileReader reader,
                                                  const char *table_name,
                                                  uint32_t *num) {
@@ -430,4 +449,30 @@ ERRNO destroy_tablet(Tablet tablet) {
         delete static_cast<storage::Tablet *>(tablet);
     }
     return common::E_OK;
+}
+
+void destroy_tsfile_result_set(ResultSet result_set) {
+    if (result_set != nullptr) {
+        delete static_cast<storage::ResultSet *>(result_set);
+    }
+}
+void destroy_device_schema(DeviceSchema schema) {
+    free(schema.device_name);
+    for (int i = 0; i < schema.timeseries_num; i++) {
+        destroy_timeseries_schema(schema.timeseries_schema[i]);
+    }
+    free(schema.timeseries_schema);
+}
+void destroy_timeseries_schema(TimeseriesSchema schema) {
+    free(schema.name);
+}
+void destroy_table_schema(TableSchema schema) {
+    free(schema.table_name);
+    for (int i = 0; i < schema.column_num; i++) {
+        destroy_column_schema(schema.column_schemas[i]);
+    }
+    free(schema.column_schemas);
+}
+void destroy_column_schema(ColumnSchema schema) {
+    free(schema.column_name);
 }

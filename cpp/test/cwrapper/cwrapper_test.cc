@@ -90,7 +90,7 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
                 tablet_add_timestamp(tablet, row, 16225600 + row);
             }
             for (int row = 0; row < max_rows; row++) {
-                tablet_add_value_by_index_int64_t(tablet, row, j, static_cast<int64_t>(row));
+                tablet_add_value_by_index_int64_t(tablet, row, j, static_cast<int64_t>(row + j));
             }
         }
         code = tsfile_writer_write_tablet(writer, tablet);
@@ -116,21 +116,14 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
     for (int i = 0; i < measurement_num - 1; i++) {
         ASSERT_TRUE(tsfile_result_set_has_next(result_set));
         ASSERT_FALSE(tsfile_result_set_is_null_by_index(result_set,i));
-        ASSERT_EQ(tsfile_result_set_get_value_by_index_int64_t(result_set, i), i);
-        ASSERT_EQ(tsfile_result_set_get_value_by_name_int64_t(result_set, std::string("measurement" + std::to_string(i)).c_str()), i);
+        ASSERT_EQ(tsfile_result_set_get_value_by_index_int64_t(result_set, i), i*2);
+        ASSERT_EQ(tsfile_result_set_get_value_by_name_int64_t(result_set, std::string("measurement" + std::to_string(i)).c_str()), i*2);
     }
+    destroy_tsfile_result_set(result_set);
 
-
-
-
-
-
-
-
-
-
-
-
+    // DeviceSchema schema = tsfile_reader_get_timeseries_schema(reader, "device4");
+    // ASSERT_EQ(schema.timeseries_num, 1);
+    // ASSERT_EQ(schema.timeseries_schema->name, std::string("measurement4"));
 }
 
 }  // namespace cwrapper
