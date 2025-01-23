@@ -19,6 +19,8 @@
 
 #include "cwrapper/tsfile_cwrapper.h"
 
+#include <reader/qds_without_timegenerator.h>
+
 #include "common/global.h"
 #include "common/tablet.h"
 #include "reader/result_set.h"
@@ -27,8 +29,8 @@
 
 static bool is_init = false;
 
-Tablet tablet_new(const char *device_id, const char **column_name_list,
-                  TSDataType *data_types, uint32_t column_num) {
+Tablet tablet_new_with_device(const char *device_id, char **column_name_list,
+                              TSDataType *data_types, uint32_t column_num, int max_rows) {
     std::vector<std::string> measurement_list;
     std::vector<common::TSDataType> data_type_list;
     for (int i = 0; i < column_num; i++) {
@@ -37,7 +39,8 @@ Tablet tablet_new(const char *device_id, const char **column_name_list,
             static_cast<common::TSDataType>(*(data_types + i)));
     }
     auto *tablet =
-        new storage::Tablet(device_id, &measurement_list, &data_type_list);
+        new storage::Tablet(device_id, &measurement_list, &data_type_list, max_rows);
+    tablet->init();
     return tablet;
 }
 
@@ -133,7 +136,7 @@ void init_tsfile_config() {
     }
 }
 
-TsFileReader tsfile_reader_open(const char *pathname, ERRNO *err_code) {
+TsFileReader tsfile_reader_new(const char *pathname, ERRNO *err_code) {
     init_tsfile_config();
     auto reader = new storage::TsFileReader();
     int ret = reader->open(pathname);
@@ -146,7 +149,7 @@ TsFileReader tsfile_reader_open(const char *pathname, ERRNO *err_code) {
     return reader;
 }
 
-TsFileWriter tsfile_writer_open(const char *pathname, ERRNO *err_code) {
+TsFileWriter tsfile_writer_new(const char *pathname, ERRNO *err_code) {
     init_tsfile_config();
     auto writer = new storage::TsFileWriter();
     int flags = O_WRONLY | O_CREAT | O_TRUNC;
@@ -162,8 +165,8 @@ TsFileWriter tsfile_writer_open(const char *pathname, ERRNO *err_code) {
     return writer;
 }
 
-TsFileWriter tsfile_writer_open_flag(const char *pathname, mode_t flag,
-                                     ERRNO *err_code) {
+TsFileWriter tsfile_writer_new_flag(const char *pathname, mode_t flag,
+                                    ERRNO *err_code) {
     init_tsfile_config();
     auto *writer = new storage::TsFileWriter();
     int ret = writer->open(pathname, O_CREAT | O_RDWR, flag);
@@ -194,7 +197,8 @@ void tsfile_writer_register_table(TsFileWriter writer, TableSchema *schema) {
     measurement_schemas.resize(schema->column_num);
     for (int i = 0; i < schema->column_num; i++) {
         ColumnSchema *cur_schema = schema->column_schemas + i;
-        measurement_schemas[i] = new storage::MeasurementSchema(cur_schema->column_name,
+        measurement_schemas[i] = new storage::MeasurementSchema(
+            cur_schema->column_name,
             static_cast<common::TSDataType>(cur_schema->data_type));
         column_categories.push_back(
             static_cast<storage::ColumnCategory>(cur_schema->column_category));
@@ -204,8 +208,9 @@ void tsfile_writer_register_table(TsFileWriter writer, TableSchema *schema) {
         schema->table_name, measurement_schemas, column_categories));
 }
 
-ERRNO tsfile_register_timeseries(TsFileWriter writer, const char *device_name,
-                                 TimeseriesSchema *schema) {
+ERRNO tsfile_writer_register_timeseries(TsFileWriter writer,
+                                        const char *device_name,
+                                        TimeseriesSchema *schema) {
     auto *w = (storage::TsFileWriter *)writer;
 
     int ret = w->register_timeseries(
@@ -216,18 +221,18 @@ ERRNO tsfile_register_timeseries(TsFileWriter writer, const char *device_name,
     return ret;
 }
 
-ERRNO tsfile_register_device(TsFileWriter writer,
-                             device_schema *device_schema) {
-    storage::TsFileWriter *w = (storage::TsFileWriter *)writer;
+ERRNO tsfile_writer_register_device(TsFileWriter writer,
+                                    const device_schema *device_schema) {
+    auto *w = static_cast<storage::TsFileWriter *>(writer);
     for (int column_id = 0; column_id < device_schema->timeseries_num;
          column_id++) {
-        TimeseriesSchema *schema = device_schema->timeseries_schema[column_id];
-        ERRNO ret = w->register_timeseries(
+        TimeseriesSchema schema = device_schema->timeseries_schema[column_id];
+        const ERRNO ret = w->register_timeseries(
             device_schema->device_name,
             storage::MeasurementSchema(
-                schema->name, (common::TSDataType)schema->data_type,
-                (common::TSEncoding)schema->encoding,
-                (common::CompressionType)schema->compression));
+                schema.name, static_cast<common::TSDataType>(schema.data_type),
+                static_cast<common::TSEncoding>(schema.encoding),
+                static_cast<common::CompressionType>(schema.compression)));
         if (ret != common::E_OK) {
             return ret;
         }
@@ -286,8 +291,13 @@ ResultSet tsfile_reader_query_path(TsFileReader reader, char **path_list,
     return qds;
 }
 
+bool tsfile_result_set_has_next(ResultSet result_set) {
+    auto *r = static_cast<storage::QDSWithoutTimeGenerator *>(result_set);
+    return r->next();
+}
+
 #define tsfile_result_set_get_value_by_name_def(type)                         \
-    type tsfile_result_set_get_value_by_name##type(ResultSet result_set,      \
+    type tsfile_result_set_get_value_by_name_##type(ResultSet result_set,      \
                                                    const char *column_name) { \
         auto *r = static_cast<storage::ResultSet *>(result_set);              \
         return r->get_value<type>(column_name);                               \
@@ -311,34 +321,20 @@ tsfile_result_set_get_value_by_index_def(float);
 tsfile_result_set_get_value_by_index_def(double);
 tsfile_result_set_get_value_by_index_def(bool);
 
-#define tsfile_result_set_is_null_by_name_def(type)                          \
-    bool tsfile_result_set_is_null_by_name_##type(ResultSet result_set,      \
-                                                  const char *column_name) { \
-        auto *r = static_cast<storage::ResultSet *>(result_set);             \
-        return r->is_null(column_name);                                      \
-    }
+bool tsfile_result_set_is_null_by_name(ResultSet result_set,
+                                       const char *column_name) {
+    auto *r = static_cast<storage::ResultSet *>(result_set);
+    return r->is_null(column_name);
+}
 
-tsfile_result_set_is_null_by_name_def(bool);
-tsfile_result_set_is_null_by_name_def(int32_t);
-tsfile_result_set_is_null_by_name_def(int64_t);
-tsfile_result_set_is_null_by_name_def(float);
-tsfile_result_set_is_null_by_name_def(double);
-
-#define tsfile_result_set_is_null_by_index_def(type)                        \
-    bool tsfile_result_set_is_null_by_index_##type(ResultSet result_set,    \
-                                                   uint32_t column_index) { \
-        auto *r = static_cast<storage::ResultSet *>(result_set);            \
-        return r->is_null(column_index);                                    \
-    }
-
-tsfile_result_set_is_null_by_index_def(bool);
-tsfile_result_set_is_null_by_index_def(int32_t);
-tsfile_result_set_is_null_by_index_def(int64_t);
-tsfile_result_set_is_null_by_index_def(float);
-tsfile_result_set_is_null_by_index_def(double);
+bool tsfile_result_set_is_null_by_index(ResultSet result_set,
+                                        uint32_t column_index) {
+    auto *r = static_cast<storage::ResultSet *>(result_set);
+    return r->is_null(column_index);
+}
 
 ResultSetMetaData tsfile_result_set_get_metadata(ResultSet result_set) {
-    auto *r = static_cast<storage::ResultSet *>(result_set);
+    auto *r = static_cast<storage::QDSWithoutTimeGenerator *>(result_set);
     ResultSetMetaData meta_data;
     storage::ResultSetMetadata *result_set_metadata = r->get_metadata();
     meta_data.column_num = result_set_metadata->get_column_count();
@@ -422,10 +418,16 @@ TableSchema *tsfile_reader_get_all_table_schemas(TsFileReader reader,
 }
 
 // delete pointer
-ERRNO delete_tsfile_ts_record(TsRecord record) {
-    auto *r = static_cast<storage::TsRecord *>(record);
-    if (r != nullptr) {
-        delete r;
+ERRNO destroy_tsfile_ts_record(TsRecord record) {
+    if (record != nullptr) {
+        delete static_cast<storage::TsRecord *>(record);
+    }
+    return common::E_OK;
+}
+
+ERRNO destroy_tablet(Tablet tablet) {
+    if (tablet != nullptr) {
+        delete static_cast<storage::Tablet *>(tablet);
     }
     return common::E_OK;
 }

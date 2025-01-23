@@ -83,7 +83,7 @@ typedef struct timeseries_schema {
 
 typedef struct device_schema {
     char* device_name;
-    TimeseriesSchema** timeseries_schema;
+    TimeseriesSchema* timeseries_schema;
     int timeseries_num;
 } DeviceSchema;
 
@@ -109,14 +109,14 @@ typedef void* ResultSet;
 typedef int32_t ERRNO;
 typedef int64_t timestamp;
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Tablet API
-Tablet tablet_new_with_device(const char* device_id, const char** column_name_list,
-                  TSDataType* data_types, uint32_t column_num);
+/*--------------------------Tablet API------------------------ */
+Tablet tablet_new_with_device(const char* device_id, char** column_name_list,
+                              TSDataType* data_types, uint32_t column_num,
+                              int max_rows);
 
 Tablet tablet_new(const char** column_name_list, TSDataType* data_types,
                   uint32_t column_num);
@@ -126,7 +126,7 @@ uint32_t tablet_get_cur_row_size(Tablet tablet);
 ERRNO tablet_add_timestamp(Tablet tablet, uint32_t row_index,
                            timestamp timestamp);
 
-#define tablet_add_value_by_name_dec(type)                                       \
+#define tablet_add_value_by_name_dec(type)                                    \
     ERRNO tablet_add_value_by_name_##type(Tablet* tablet, uint32_t row_index, \
                                           char* column_name, type value);
 
@@ -136,8 +136,8 @@ tablet_add_value_by_name_dec(float);
 tablet_add_value_by_name_dec(double);
 tablet_add_value_by_name_dec(bool);
 
-#define table_add_value_by_index_dec(type)                                        \
-    ERRNO tablet_add_value_by_index_##type(Tablet* tablet, uint32_t row_index, \
+#define table_add_value_by_index_dec(type)                                     \
+    ERRNO tablet_add_value_by_index_##type(Tablet tablet, uint32_t row_index, \
                                            uint32_t column_index, type value);
 
 table_add_value_by_index_dec(int32_t);
@@ -149,7 +149,7 @@ table_add_value_by_index_dec(bool);
 void* tablet_get_value(Tablet tablet, uint32_t row_index, uint32_t schema_index,
                        TSDataType& type);
 
-// TsRecord API
+/*--------------------------TsRecord API------------------------ */
 TsRecord ts_record_new(const char* device_name, timestamp timestamp,
                        int timeseries_num);
 
@@ -163,7 +163,7 @@ insert_data_into_ts_record_by_name_(bool);
 insert_data_into_ts_record_by_name_(float);
 insert_data_into_ts_record_by_name_(double);
 
-// TsFile reader and writer
+/*--------------------------TsFile Reader and Writer------------------------ */
 TsFileReader tsfile_reader_new(const char* pathname, ERRNO* err_code);
 TsFileWriter tsfile_writer_new(const char* pathname, ERRNO* err_code);
 TsFileWriter tsfile_writer_open_conf(const char* pathname, mode_t flag,
@@ -172,31 +172,31 @@ TsFileWriter tsfile_writer_open_conf(const char* pathname, mode_t flag,
 ERRNO tsfile_writer_close(TsFileWriter writer);
 ERRNO tsfile_reader_close(TsFileReader reader);
 
-// register table or timeseries
+/*--------------------------TsFile Writer Register------------------------ */
 void tsfile_writer_register_table(TsFileWriter writer, TableSchema* schema);
-ERRNO tsfile_register_timeseries(TsFileWriter writer, const char* device_name,
-                                 TimeseriesSchema* schema);
-ERRNO tsfile_register_device(TsFileWriter writer, DeviceSchema* device_schema);
+ERRNO tsfile_writer_register_timeseries(TsFileWriter writer,
+                                        const char* device_name,
+                                        TimeseriesSchema* schema);
+ERRNO tsfile_writer_register_device(TsFileWriter writer,
+                                    const DeviceSchema* device_schema);
 
-// write data
+/*-------------------TsFile Writer write and flush data------------------ */
 ERRNO tsfile_writer_write_tablet(TsFileWriter writer, Tablet tablet);
 ERRNO tsfile_writer_write_ts_record(TsFileWriter writer, TsRecord record);
-
-// flush data
 ERRNO tsfile_writer_flush_data(TsFileWriter writer);
 
-// query
+/*-------------------TsFile reader query data------------------ */
 ResultSet tsfile_reader_query_table(TsFileReader reader, char* table_name,
-                              char** columns, uint32_t column_num,
-                              timestamp start_time, timestamp end_time);
+                                    char** columns, uint32_t column_num,
+                                    timestamp start_time, timestamp end_time);
 ResultSet tsfile_reader_query_path(TsFileReader reader, char** path_list,
-                              uint32_t path_num, timestamp start_time,
-                              timestamp end_time);
+                                   uint32_t path_num, timestamp start_time,
+                                   timestamp end_time);
 bool tsfile_result_set_has_next(ResultSet result_set);
 
 #define tsfile_result_set_get_value_by_name_(type)                       \
-    type tsfile_result_set_get_value_by_name##type(ResultSet result_set, \
-                                                   char* column_name)
+    type tsfile_result_set_get_value_by_name_##type(ResultSet result_set, \
+                                                   const char* column_name)
 tsfile_result_set_get_value_by_name_(bool);
 tsfile_result_set_get_value_by_name_(int32_t);
 tsfile_result_set_get_value_by_name_(int64_t);
@@ -213,25 +213,11 @@ tsfile_result_set_get_value_by_index_(float);
 tsfile_result_set_get_value_by_index_(double);
 tsfile_result_set_get_value_by_index_(bool);
 
-#define tsfile_result_set_is_null_by_name_(type)                        \
-    bool tsfile_result_set_is_null_by_name_##type(ResultSet result_set, \
-                                                  char* column_name);
+bool tsfile_result_set_is_null_by_name(ResultSet result_set,
+                                              char* column_name);
 
-tsfile_result_set_is_null_by_name_(bool);
-tsfile_result_set_is_null_by_name_(int32_t);
-tsfile_result_set_is_null_by_name_(int64_t);
-tsfile_result_set_is_null_by_name_(float);
-tsfile_result_set_is_null_by_name_(double);
-
-#define tsfile_result_set_is_null_by_index_(type)                        \
-    bool tsfile_result_set_is_null_by_index_##type(ResultSet result_set, \
-                                                   uint32_t column_index);
-
-tsfile_result_set_is_null_by_index_(bool);
-tsfile_result_set_is_null_by_index_(int32_t);
-tsfile_result_set_is_null_by_index_(int64_t);
-tsfile_result_set_is_null_by_index_(float);
-tsfile_result_set_is_null_by_index_(double);
+bool tsfile_result_set_is_null_by_index(ResultSet result_set,
+                                               uint32_t column_index);
 
 ResultSetMetaData tsfile_result_set_get_metadata(ResultSet result_set);
 
@@ -241,7 +227,8 @@ TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
                                            const char* table_name);
 
 // destroy pointer
-ERRNO delete_tsfile_ts_record(TsRecord record);
+ERRNO destroy_tsfile_ts_record(TsRecord record);
+ERRNO destroy_tablet(Tablet tablet);
 
 #ifdef __cplusplus
 }
