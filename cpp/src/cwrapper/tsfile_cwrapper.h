@@ -75,7 +75,7 @@ typedef struct table_schema {
 } TableSchema;
 
 typedef struct timeseries_schema {
-    char* name;
+    char* timeseries_name;
     TSDataType data_type;
     TSEncoding encoding;
     CompressionType compression;
@@ -90,7 +90,7 @@ typedef struct device_schema {
 typedef struct {
     char** column_names;
     TSDataType* data_types;
-    uint32_t column_num;
+    int column_num;
 } ResultSetMetaData;
 
 typedef struct tsfile_conf {
@@ -115,11 +115,11 @@ extern "C" {
 
 /*--------------------------Tablet API------------------------ */
 Tablet tablet_new_with_device(const char* device_id, char** column_name_list,
-                              TSDataType* data_types, uint32_t column_num,
+                              TSDataType* data_types, int column_num,
                               int max_rows);
 
 Tablet tablet_new(const char** column_name_list, TSDataType* data_types,
-                  uint32_t column_num);
+                  int column_num);
 
 uint32_t tablet_get_cur_row_size(Tablet tablet);
 
