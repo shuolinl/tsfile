@@ -60,7 +60,7 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
             sizeof(TimeseriesSchema) * measurement_num);
         for (int j = 0; j < measurement_num; j++) {
             TimeseriesSchema* schema = device_schema[i].timeseries_schema + j;
-            schema->name = strdup(("measurement" + std::to_string(j)).c_str());
+            schema->timeseries_name = strdup(("measurement" + std::to_string(j)).c_str());
             schema->compression = TS_COMPRESSION_UNCOMPRESSED;
             schema->data_type = TS_DATATYPE_INT64;
             schema->encoding = TS_ENCODING_PLAIN;
@@ -95,7 +95,7 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
         }
         code = tsfile_writer_write_tablet(writer, tablet);
         ASSERT_EQ(code, 0);
-        code = destroy_tablet(tablet);
+        code = free_tablet(tablet);
     }
     ASSERT_EQ(tsfile_writer_flush_data(writer), 0);
     ASSERT_EQ(tsfile_writer_close(writer), 0);
@@ -119,7 +119,7 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
         ASSERT_EQ(tsfile_result_set_get_value_by_index_int64_t(result_set, i), i*2);
         ASSERT_EQ(tsfile_result_set_get_value_by_name_int64_t(result_set, std::string("measurement" + std::to_string(i)).c_str()), i*2);
     }
-    destroy_tsfile_result_set(result_set);
+    close_tsfile_result_set(result_set);
 
     // DeviceSchema schema = tsfile_reader_get_timeseries_schema(reader, "device4");
     // ASSERT_EQ(schema.timeseries_num, 1);

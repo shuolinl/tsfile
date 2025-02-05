@@ -100,7 +100,7 @@ typedef struct tsfile_conf {
 typedef void* TsFileReader;
 typedef void* TsFileWriter;
 
-// just resue Tablet from c++
+// just reuse Tablet from c++
 typedef void* Tablet;
 typedef void* TsRecord;
 
@@ -136,7 +136,7 @@ tablet_add_value_by_name_dec(float);
 tablet_add_value_by_name_dec(double);
 tablet_add_value_by_name_dec(bool);
 
-#define table_add_value_by_index_dec(type)                                     \
+#define table_add_value_by_index_dec(type)                                    \
     ERRNO tablet_add_value_by_index_##type(Tablet tablet, uint32_t row_index, \
                                            uint32_t column_index, type value);
 
@@ -166,17 +166,17 @@ insert_data_into_ts_record_by_name_(double);
 /*--------------------------TsFile Reader and Writer------------------------ */
 TsFileReader tsfile_reader_new(const char* pathname, ERRNO* err_code);
 TsFileWriter tsfile_writer_new(const char* pathname, ERRNO* err_code);
-TsFileWriter tsfile_writer_open_conf(const char* pathname, mode_t flag,
-                                     ERRNO* err_code, TsFileConf* conf);
+TsFileWriter tsfile_writer_new_with_conf(const char* pathname, mode_t flag,
+                                         ERRNO* err_code, TsFileConf* conf);
 
 ERRNO tsfile_writer_close(TsFileWriter writer);
 ERRNO tsfile_reader_close(TsFileReader reader);
 
 /*--------------------------TsFile Writer Register------------------------ */
-void tsfile_writer_register_table(TsFileWriter writer, TableSchema* schema);
+ERRNO tsfile_writer_register_table(TsFileWriter writer, TableSchema* schema);
 ERRNO tsfile_writer_register_timeseries(TsFileWriter writer,
-                                        const char* device_name,
-                                        TimeseriesSchema* schema);
+                                        const char* device_id,
+                                        const TimeseriesSchema* schema);
 ERRNO tsfile_writer_register_device(TsFileWriter writer,
                                     const DeviceSchema* device_schema);
 
@@ -194,9 +194,9 @@ ResultSet tsfile_reader_query_path(TsFileReader reader, char** path_list,
                                    timestamp end_time);
 bool tsfile_result_set_has_next(ResultSet result_set);
 
-#define tsfile_result_set_get_value_by_name_(type)                       \
+#define tsfile_result_set_get_value_by_name_(type)                        \
     type tsfile_result_set_get_value_by_name_##type(ResultSet result_set, \
-                                                   const char* column_name)
+                                                    const char* column_name)
 tsfile_result_set_get_value_by_name_(bool);
 tsfile_result_set_get_value_by_name_(int32_t);
 tsfile_result_set_get_value_by_name_(int64_t);
@@ -213,29 +213,30 @@ tsfile_result_set_get_value_by_index_(float);
 tsfile_result_set_get_value_by_index_(double);
 tsfile_result_set_get_value_by_index_(bool);
 
-bool tsfile_result_set_is_null_by_name(ResultSet result_set,
-                                              char* column_name);
+bool tsfile_result_set_is_null_by_name(ResultSet result_set, char* column_name);
 
 bool tsfile_result_set_is_null_by_index(ResultSet result_set,
-                                               uint32_t column_index);
+                                        uint32_t column_index);
 
 ResultSetMetaData tsfile_result_set_get_metadata(ResultSet result_set);
 
-
-// Desc Table Schema
-
+// Desc table schema.
 TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
                                            const char* table_name);
-DeviceSchema tsfile_reader_get_timeseries_schema(TsFileReader reader, const char* device_id);
+DeviceSchema tsfile_reader_get_timeseries_schema(TsFileReader reader,
+                                                 const char* device_id);
 
-// destroy pointer
-ERRNO destroy_tsfile_ts_record(TsRecord record);
-ERRNO destroy_tablet(Tablet tablet);
-void destroy_tsfile_result_set(ResultSet result_set);
-void destroy_device_schema(DeviceSchema schema);
-void destroy_timeseries_schema(TimeseriesSchema schema);
-void destroy_table_schema(TableSchema schema);
-void destroy_column_schema(ColumnSchema schema);
+TableSchema* tsfile_reader_get_all_table_schemas(TsFileReader reader,
+                                                 uint32_t* schema_num);
+
+// Close and free resource.
+ERRNO free_tsfile_ts_record(TsRecord record);
+ERRNO free_tablet(Tablet tablet);
+void close_tsfile_result_set(ResultSet result_set);
+void free_device_schema(const DeviceSchema& schema);
+void free_timeseries_schema(const TimeseriesSchema& schema);
+void free_table_schema(const TableSchema& schema);
+void free_column_schema(ColumnSchema schema);
 
 #ifdef __cplusplus
 }
