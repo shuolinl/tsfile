@@ -19,6 +19,8 @@ under the License.
 include(FetchContent)
 
 set(URL_LIST
+    "https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip"
+    "https://hub.nuaa.cf/google/googletest/archive/refs/tags/release-1.12.1.zip"
     "https://hub.yzuu.cf/google/googletest/archive/refs/tags/release-1.12.1.zip"
 )
 
