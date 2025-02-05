@@ -204,4 +204,4 @@
 //         ret->column_names[i] = strdup(columns_name[i]);
 //     }
 //     return ret;
-}
+// }

@@ -60,7 +60,8 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
             sizeof(TimeseriesSchema) * measurement_num);
         for (int j = 0; j < measurement_num; j++) {
             TimeseriesSchema* schema = device_schema[i].timeseries_schema + j;
-            schema->timeseries_name = strdup(("measurement" + std::to_string(j)).c_str());
+            schema->timeseries_name =
+                strdup(("measurement" + std::to_string(j)).c_str());
             schema->compression = TS_COMPRESSION_UNCOMPRESSED;
             schema->data_type = TS_DATATYPE_INT64;
             schema->encoding = TS_ENCODING_PLAIN;
@@ -71,14 +72,18 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
     int max_rows = 100;
     for (int i = 0; i < device_num; i++) {
         char* device_name = strdup(("device" + std::to_string(i)).c_str());
-        char** measurements_name = static_cast<char**>(malloc(measurement_num * sizeof(char*)));
-        TSDataType *data_types = static_cast<TSDataType*>(
+        char** measurements_name =
+            static_cast<char**>(malloc(measurement_num * sizeof(char*)));
+        TSDataType* data_types = static_cast<TSDataType*>(
             malloc(sizeof(TSDataType) * measurement_num));
         for (int j = 0; j < measurement_num; j++) {
-            measurements_name[j] = strdup(("measurement" + std::to_string(j)).c_str());
+            measurements_name[j] =
+                strdup(("measurement" + std::to_string(j)).c_str());
             data_types[j] = TS_DATATYPE_INT64;
         }
-        Tablet tablet = tablet_new_with_device(device_name, measurements_name, data_types, measurement_num, max_rows);
+        Tablet tablet =
+            tablet_new_with_device(device_name, measurements_name, data_types,
+                                   measurement_num, max_rows);
         free(device_name);
         free(data_types);
         for (int j = 0; j < measurement_num; j++) {
@@ -90,12 +95,13 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
                 tablet_add_timestamp(tablet, row, 16225600 + row);
             }
             for (int row = 0; row < max_rows; row++) {
-                tablet_add_value_by_index_int64_t(tablet, row, j, static_cast<int64_t>(row + j));
+                tablet_add_value_by_index_int64_t(
+                    tablet, row, j, static_cast<int64_t>(row + j));
             }
         }
         code = tsfile_writer_write_tablet(writer, tablet);
         ASSERT_EQ(code, 0);
-        code = free_tablet(tablet);
+        free_tablet(&tablet);
     }
     ASSERT_EQ(tsfile_writer_flush_data(writer), 0);
     ASSERT_EQ(tsfile_writer_close(writer), 0);
@@ -103,26 +109,39 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
     TsFileReader reader = tsfile_reader_new(TSFILE_NAME, &code);
     ASSERT_EQ(code, 0);
 
-    char** select_list = static_cast<char**>(malloc(measurement_num * sizeof(char*)));
+    char** select_list =
+        static_cast<char**>(malloc(measurement_num * sizeof(char*)));
     for (int i = 0; i < measurement_num; i++) {
-        select_list[i] = strdup(("device" + std::to_string(i) + ".measurement" + std::to_string(i)).c_str());
+        select_list[i] = strdup(
+            ("device" + std::to_string(i) + ".measurement" + std::to_string(i))
+                .c_str());
     }
-    ResultSet result_set =  tsfile_reader_query_path(reader, select_list, measurement_num, 16225600, 16225600 + max_rows -1);
+    ResultSet result_set =
+        tsfile_reader_query_path(reader, select_list, measurement_num, 16225600,
+                                 16225600 + max_rows - 1);
 
     ResultSetMetaData metadata = tsfile_result_set_get_metadata(result_set);
     ASSERT_EQ(metadata.column_num, measurement_num);
-    ASSERT_EQ(std::string(metadata.column_names[4]), std::string("device4.measurement4"));
+    ASSERT_EQ(std::string(metadata.column_names[4]),
+              std::string("device4.measurement4"));
     ASSERT_EQ(metadata.data_types[9], TS_DATATYPE_INT64);
     for (int i = 0; i < measurement_num - 1; i++) {
         ASSERT_TRUE(tsfile_result_set_has_next(result_set));
-        ASSERT_FALSE(tsfile_result_set_is_null_by_index(result_set,i));
-        ASSERT_EQ(tsfile_result_set_get_value_by_index_int64_t(result_set, i), i*2);
-        ASSERT_EQ(tsfile_result_set_get_value_by_name_int64_t(result_set, std::string("measurement" + std::to_string(i)).c_str()), i*2);
+        ASSERT_FALSE(tsfile_result_set_is_null_by_index(result_set, i));
+        ASSERT_EQ(tsfile_result_set_get_value_by_index_int64_t(result_set, i),
+                  i * 2);
+        ASSERT_EQ(tsfile_result_set_get_value_by_name_int64_t(
+                      result_set,
+                      std::string("measurement" + std::to_string(i)).c_str()),
+                  i * 2);
     }
-    close_tsfile_result_set(result_set);
-
-    // DeviceSchema schema = tsfile_reader_get_timeseries_schema(reader, "device4");
-    // ASSERT_EQ(schema.timeseries_num, 1);
+    free_tsfile_result_set(&result_set);
+    for (int i = 0; i < measurement_num; i++) {
+        free(select_list[i]);
+    }
+    free(select_list);
+    // DeviceSchema schema = tsfile_reader_get_timeseries_schema(reader,
+    // "device4"); ASSERT_EQ(schema.timeseries_num, 1);
     // ASSERT_EQ(schema.timeseries_schema->name, std::string("measurement4"));
 }
 

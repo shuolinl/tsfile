@@ -80,15 +80,6 @@ void TsFileReader::destroy_query_data_set(storage::ResultSet* qds) {
     tsfile_executor_->destroy_query_data_set(qds);
 }
 
-std::vector<std::string> TsFileReader::get_all_tables() {
-    std::vector<std::string> tables;
-    for (auto meta_node :
-         tsfile_executor_->get_tsfile_meta()->table_metadata_index_node_map_) {
-        tables.emplace_back(meta_node.first);
-    }
-    return tables;
-}
-
 std::vector<std::shared_ptr<IDeviceID>> TsFileReader::get_all_devices(
     std::string table_name) {
     TsFileMeta* tsfile_meta = tsfile_executor_->get_tsfile_meta();

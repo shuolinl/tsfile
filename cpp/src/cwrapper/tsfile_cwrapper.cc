@@ -67,7 +67,7 @@ ERRNO tablet_add_timestamp(Tablet tablet, uint32_t row_index,
                                                                  timestamp);
 }
 
-#define tablet_add_value_by_name_def(type)                                   \
+#define TABLET_ADD_VALUE_BY_NAME_DEF(type)                                   \
     ERRNO tablet_add_value_by_name_##type(Tablet tablet, uint32_t row_index, \
                                           const char *column_name,           \
                                           type value) {                      \
@@ -75,13 +75,13 @@ ERRNO tablet_add_timestamp(Tablet tablet, uint32_t row_index,
             row_index, column_name, value);                                  \
     }
 
-tablet_add_value_by_name_def(int32_t);
-tablet_add_value_by_name_def(int64_t);
-tablet_add_value_by_name_def(float);
-tablet_add_value_by_name_def(double);
-tablet_add_value_by_name_def(bool);
+TABLET_ADD_VALUE_BY_NAME_DEF(int32_t);
+TABLET_ADD_VALUE_BY_NAME_DEF(int64_t);
+TABLET_ADD_VALUE_BY_NAME_DEF(float);
+TABLET_ADD_VALUE_BY_NAME_DEF(double);
+TABLET_ADD_VALUE_BY_NAME_DEF(bool);
 
-#define table_add_value_by_index_def(type)                                    \
+#define TABLE_ADD_VALUE_BY_INDEX_DEF(type)                                    \
     ERRNO tablet_add_value_by_index_##type(Tablet tablet, uint32_t row_index, \
                                            uint32_t column_index,             \
                                            type value) {                      \
@@ -89,11 +89,11 @@ tablet_add_value_by_name_def(bool);
             row_index, column_index, value);                                  \
     }
 
-table_add_value_by_index_def(int32_t);
-table_add_value_by_index_def(int64_t);
-table_add_value_by_index_def(float);
-table_add_value_by_index_def(double);
-table_add_value_by_index_def(bool);
+TABLE_ADD_VALUE_BY_INDEX_DEF(int32_t);
+TABLE_ADD_VALUE_BY_INDEX_DEF(int64_t);
+TABLE_ADD_VALUE_BY_INDEX_DEF(float);
+TABLE_ADD_VALUE_BY_INDEX_DEF(double);
+TABLE_ADD_VALUE_BY_INDEX_DEF(bool);
 
 void *tablet_get_value(Tablet tablet, uint32_t row_index, uint32_t schema_index,
                        TSDataType *type) {
@@ -105,14 +105,13 @@ void *tablet_get_value(Tablet tablet, uint32_t row_index, uint32_t schema_index,
 }
 
 // TsRecord API
-TsRecord ts_record_new(const char *device_name, int64_t timestamp,
+TsRecord ts_record_new(const char *device_id, timestamp timestamp,
                        int timeseries_num) {
-    auto *record =
-        new storage::TsRecord(timestamp, device_name, timeseries_num);
+    auto *record = new storage::TsRecord(timestamp, device_id, timeseries_num);
     return record;
 }
 
-#define insert_data_into_ts_record_by_name_def(type)                 \
+#define INSERT_DATA_INTO_TS_RECORD_BY_NAME_DEF(type)                 \
     ERRNO insert_data_into_ts_record_by_name##type(                  \
         TsRecord data, const char *measurement_name, type value) {   \
         auto *record = (storage::TsRecord *)data;                    \
@@ -123,11 +122,11 @@ TsRecord ts_record_new(const char *device_name, int64_t timestamp,
         return common::E_OK;                                         \
     }
 
-insert_data_into_ts_record_by_name_def(int32_t);
-insert_data_into_ts_record_by_name_def(int64_t);
-insert_data_into_ts_record_by_name_def(bool);
-insert_data_into_ts_record_by_name_def(float);
-insert_data_into_ts_record_by_name_def(double);
+INSERT_DATA_INTO_TS_RECORD_BY_NAME_DEF(int32_t);
+INSERT_DATA_INTO_TS_RECORD_BY_NAME_DEF(int64_t);
+INSERT_DATA_INTO_TS_RECORD_BY_NAME_DEF(bool);
+INSERT_DATA_INTO_TS_RECORD_BY_NAME_DEF(float);
+INSERT_DATA_INTO_TS_RECORD_BY_NAME_DEF(double);
 
 void init_tsfile_config() {
     if (!is_init) {
@@ -247,9 +246,7 @@ ERRNO tsfile_writer_write_ts_record(TsFileWriter writer, TsRecord data) {
     auto *w = static_cast<storage::TsFileWriter *>(writer);
     const auto *record = static_cast<storage::TsRecord *>(data);
     const int ret = w->write_record(*record);
-    if (ret == common::E_OK) {
-        delete record;
-    }
+    delete record;
     return ret;
 }
 
@@ -266,8 +263,8 @@ ERRNO tsfile_writer_flush_data(TsFileWriter writer) {
 
 // Query
 
-ResultSet tsfile_reader_query_table(TsFileReader reader, char *table_name,
-                                    char **columns, uint32_t column_num,
+ResultSet tsfile_reader_query_table(TsFileReader reader, const char *table_name,
+                                    const char **columns, uint32_t column_num,
                                     timestamp start_time, timestamp end_time) {
     // TODO: Implement query table with tsfile reader.
     return nullptr;
@@ -291,30 +288,30 @@ bool tsfile_result_set_has_next(ResultSet result_set) {
     return r->next();
 }
 
-#define tsfile_result_set_get_value_by_name_def(type)                          \
+#define TSFILE_RESULT_SET_GET_VALUE_BY_NAME_DEF(type)                          \
     type tsfile_result_set_get_value_by_name_##type(ResultSet result_set,      \
                                                     const char *column_name) { \
         auto *r = static_cast<storage::ResultSet *>(result_set);               \
         return r->get_value<type>(column_name);                                \
     }
-tsfile_result_set_get_value_by_name_def(bool);
-tsfile_result_set_get_value_by_name_def(int32_t);
-tsfile_result_set_get_value_by_name_def(int64_t);
-tsfile_result_set_get_value_by_name_def(float);
-tsfile_result_set_get_value_by_name_def(double);
+TSFILE_RESULT_SET_GET_VALUE_BY_NAME_DEF(bool);
+TSFILE_RESULT_SET_GET_VALUE_BY_NAME_DEF(int32_t);
+TSFILE_RESULT_SET_GET_VALUE_BY_NAME_DEF(int64_t);
+TSFILE_RESULT_SET_GET_VALUE_BY_NAME_DEF(float);
+TSFILE_RESULT_SET_GET_VALUE_BY_NAME_DEF(double);
 
-#define tsfile_result_set_get_value_by_index_def(type)                        \
+#define TSFILE_RESULT_SET_GET_VALUE_BY_INDEX_DEF(type)                        \
     type tsfile_result_set_get_value_by_index_##type(ResultSet result_set,    \
                                                      uint32_t column_index) { \
         auto *r = static_cast<storage::ResultSet *>(result_set);              \
         return r->get_value<type>(column_index);                              \
     }
 
-tsfile_result_set_get_value_by_index_def(int32_t);
-tsfile_result_set_get_value_by_index_def(int64_t);
-tsfile_result_set_get_value_by_index_def(float);
-tsfile_result_set_get_value_by_index_def(double);
-tsfile_result_set_get_value_by_index_def(bool);
+TSFILE_RESULT_SET_GET_VALUE_BY_INDEX_DEF(int32_t);
+TSFILE_RESULT_SET_GET_VALUE_BY_INDEX_DEF(int64_t);
+TSFILE_RESULT_SET_GET_VALUE_BY_INDEX_DEF(float);
+TSFILE_RESULT_SET_GET_VALUE_BY_INDEX_DEF(double);
+TSFILE_RESULT_SET_GET_VALUE_BY_INDEX_DEF(bool);
 
 bool tsfile_result_set_is_null_by_name(ResultSet result_set,
                                        const char *column_name) {
@@ -346,28 +343,23 @@ ResultSetMetaData tsfile_result_set_get_metadata(ResultSet result_set) {
     return meta_data;
 }
 
-char *tsfile_result_set_meta_get_column_name(ResultSet result_set,
+char *tsfile_result_set_meta_get_column_name(ResultSetMetaData result_set,
                                              uint32_t column_index) {
-    auto *r = static_cast<storage::ResultSet *>(result_set);
-    return strdup(r->get_metadata()->get_column_name(column_index).c_str());
+    return result_set.column_names[column_index];
 }
 
-TSDataType tsfile_result_set_meta_get_data_type(ResultSet result_set,
+TSDataType tsfile_result_set_meta_get_data_type(ResultSetMetaData result_set,
                                                 uint32_t column_index) {
-    auto *r = static_cast<storage::ResultSet *>(result_set);
-    return static_cast<TSDataType>(
-        r->get_metadata()->get_column_type(column_index));
+    return result_set.data_types[column_index];
 }
 
-uint32_t tsfile_result_set_meta_get_column_num(ResultSet result_set) {
-    auto *r = static_cast<storage::ResultSet *>(result_set);
-    return r->get_metadata()->get_column_count();
+int tsfile_result_set_meta_get_column_num(ResultSetMetaData result_set) {
+    return result_set.column_num;
 }
 
-TableSchema tsfile_reader_get_table_schema(
-    TsFileReader reader,
-    const char
-        *table_name) {  // TODO: Implement get table schema with tsfile reader.
+TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
+                                           const char *table_name) {
+    // TODO: Implement get table schema with tsfile reader.
     return TableSchema();
 }
 
@@ -403,36 +395,46 @@ TableSchema *tsfile_reader_get_all_table_schemas(TsFileReader reader,
 }
 
 // delete pointer
-ERRNO free_tsfile_ts_record(TsRecord record) {
-    if (record != nullptr) {
-        delete static_cast<storage::TsRecord *>(record);
+void free_tsfile_ts_record(TsRecord* record) {
+    if (*record != nullptr) {
+        delete static_cast<storage::TsRecord *>(*record);
     }
-    return common::E_OK;
+    *record = nullptr;
 }
 
-ERRNO free_tablet(Tablet tablet) {
-    if (tablet != nullptr) {
-        delete static_cast<storage::Tablet *>(tablet);
+void free_tablet(Tablet* tablet) {
+    if (*tablet != nullptr) {
+        delete static_cast<storage::Tablet *>(*tablet);
     }
-    return common::E_OK;
+    *tablet = nullptr;
 }
 
-void close_tsfile_result_set(ResultSet result_set) {
-    if (result_set != nullptr) {
-        delete static_cast<storage::ResultSet *>(result_set);
+void free_tsfile_result_set(ResultSet* result_set) {
+    if (*result_set != nullptr) {
+        delete static_cast<storage::ResultSet *>(*result_set);
     }
+    *result_set = nullptr;
 }
-void free_device_schema(const DeviceSchema &schema) {
+
+void free_result_set_meta_data(ResultSetMetaData result_set_meta_data) {
+    for (int i = 0; i < result_set_meta_data.column_num; i++) {
+        free(result_set_meta_data.column_names[i]);
+    }
+    free(result_set_meta_data.column_names);
+    free(result_set_meta_data.data_types);
+}
+
+void free_device_schema(DeviceSchema schema) {
     free(schema.device_name);
     for (int i = 0; i < schema.timeseries_num; i++) {
         free_timeseries_schema(schema.timeseries_schema[i]);
     }
     free(schema.timeseries_schema);
 }
-void free_timeseries_schema(const TimeseriesSchema &schema) {
+void free_timeseries_schema(TimeseriesSchema schema) {
     free(schema.timeseries_name);
 }
-void free_table_schema(const TableSchema &schema) {
+void free_table_schema(TableSchema schema) {
     free(schema.table_name);
     for (int i = 0; i < schema.column_num; i++) {
         free_column_schema(schema.column_schemas[i]);
