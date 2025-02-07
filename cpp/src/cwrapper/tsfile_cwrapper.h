@@ -228,7 +228,7 @@ int tsfile_result_set_meta_get_column_num(ResultSetMetaData result_set);
 // Desc table schema.
 TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
                                            const char* table_name);
-DeviceSchema tsfile_reader_get_timeseries_schema(TsFileReader reader,
+DeviceSchema tsfile_reader_get_device_schema(TsFileReader reader,
                                                  const char* device_id);
 
 TableSchema* tsfile_reader_get_all_table_schemas(TsFileReader reader,

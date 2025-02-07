@@ -140,7 +140,7 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
         free(select_list[i]);
     }
     free(select_list);
-    // DeviceSchema schema = tsfile_reader_get_timeseries_schema(reader,
+    // DeviceSchema schema = tsfile_reader_get_device_schema(reader,
     // "device4"); ASSERT_EQ(schema.timeseries_num, 1);
     // ASSERT_EQ(schema.timeseries_schema->name, std::string("measurement4"));
 }

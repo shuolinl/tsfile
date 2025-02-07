@@ -246,7 +246,6 @@ ERRNO tsfile_writer_write_ts_record(TsFileWriter writer, TsRecord data) {
     auto *w = static_cast<storage::TsFileWriter *>(writer);
     const auto *record = static_cast<storage::TsRecord *>(data);
     const int ret = w->write_record(*record);
-    delete record;
     return ret;
 }
 
@@ -363,7 +362,7 @@ TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
     return TableSchema();
 }
 
-DeviceSchema tsfile_reader_get_timeseries_schema(TsFileReader reader,
+DeviceSchema tsfile_reader_get_device_schema(TsFileReader reader,
                                                  const char *device_id) {
     auto *r = static_cast<storage::TsFileReader *>(reader);
     std::vector<storage::MeasurementSchema> measurement_schemas;
