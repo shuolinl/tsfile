@@ -84,6 +84,7 @@ endif ()
 
 if(NOT WIN32)
 #enable address sanitizer default
+    set(ENV{ASAN_OPTIONS} "detect_container_overflow=0")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
 endif()
 
