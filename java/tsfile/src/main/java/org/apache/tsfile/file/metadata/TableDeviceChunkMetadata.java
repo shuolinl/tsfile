@@ -24,9 +24,9 @@ import org.apache.tsfile.file.metadata.statistics.Statistics;
 import java.io.Serializable;
 import java.util.List;
 
-public class AlignedChunkMetadata extends AbstractAlignedChunkMetadata {
+public class TableDeviceChunkMetadata extends AbstractAlignedChunkMetadata {
 
-  public AlignedChunkMetadata(
+  public TableDeviceChunkMetadata(
       IChunkMetadata timeChunkMetadata, List<IChunkMetadata> valueChunkMetadataList) {
     super(timeChunkMetadata, valueChunkMetadataList);
   }
@@ -34,25 +34,11 @@ public class AlignedChunkMetadata extends AbstractAlignedChunkMetadata {
   @Override
   public AbstractAlignedChunkMetadata createNewChunkMetadata(
       IChunkMetadata timeChunkMetadata, List<IChunkMetadata> valueChunkMetadataList) {
-    return new AlignedChunkMetadata(timeChunkMetadata, valueChunkMetadataList);
+    return new TableDeviceChunkMetadata(timeChunkMetadata, valueChunkMetadataList);
   }
 
   @Override
   public Statistics<? extends Serializable> getStatistics() {
-    return valueChunkMetadataList.size() == 1 && valueChunkMetadataList.get(0) != null
-        ? valueChunkMetadataList.get(0).getStatistics()
-        : timeChunkMetadata.getStatistics();
-  }
-
-  @Override
-  public boolean timeAllSelected() {
-    for (int index = 0; index < getMeasurementCount(); index++) {
-      if (!hasNullValue(index)) {
-        // When there is any value page point number that is the same as the time page,
-        // it means that all timestamps in time page will be selected.
-        return true;
-      }
-    }
-    return false;
+    return timeChunkMetadata.getStatistics();
   }
 }
