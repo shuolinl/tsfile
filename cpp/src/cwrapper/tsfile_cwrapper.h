@@ -19,6 +19,8 @@
 
 #ifndef SRC_CWRAPPER_TSFILE_CWRAPPER_H_
 #define SRC_CWRAPPER_TSFILE_CWRAPPER_H_
+
+#include <cstdint>
 #include <iostream>
 
 typedef enum {
