@@ -43,6 +43,7 @@ TEST_F(CWrapperTest, RegisterTimeSeries) {
     code = tsfile_writer_register_timeseries(writer, "device1", &ts_schema);
     ASSERT_EQ(code, 0);
     free(temperature);
+    tsfile_writer_close(writer);
 }
 
 TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
@@ -68,6 +69,7 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
         }
         code = tsfile_writer_register_device(writer, &device_schema[i]);
         ASSERT_EQ(code, 0);
+        free_device_schema(device_schema[i]);
     }
     int max_rows = 100;
     for (int i = 0; i < device_num; i++) {
@@ -136,10 +138,12 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
                   i * 2);
     }
     free_tsfile_result_set(&result_set);
+    free_result_set_meta_data(metadata);
     for (int i = 0; i < measurement_num; i++) {
         free(select_list[i]);
     }
     free(select_list);
+    tsfile_reader_close(reader);
     // DeviceSchema schema = tsfile_reader_get_device_schema(reader,
     // "device4"); ASSERT_EQ(schema.timeseries_num, 1);
     // ASSERT_EQ(schema.timeseries_schema->name, std::string("measurement4"));
