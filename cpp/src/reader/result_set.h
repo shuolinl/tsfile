@@ -80,10 +80,10 @@ class ResultSet {
 };
 
 template <>
-inline common::String* ResultSet::get_value(const std::string& column_name) {
+inline common::String* ResultSet::get_value(const std::string& full_name) {
     RowRecord* row_record = get_row_record();
-    ASSERT(index_lookup_.count(column_name));
-    uint32_t index = index_lookup_[column_name];
+    ASSERT(index_lookup_.count(full_name));
+    uint32_t index = index_lookup_[full_name];
     ASSERT(index >= 0 && index < row_record->get_col_num());
     return row_record->get_field(index)->get_string_value();
 }

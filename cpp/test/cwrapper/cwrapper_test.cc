@@ -111,21 +111,19 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
     TsFileReader reader = tsfile_reader_new(TSFILE_NAME, &code);
     ASSERT_EQ(code, 0);
 
-    char** select_list =
+    char** sensor_list =
         static_cast<char**>(malloc(measurement_num * sizeof(char*)));
     for (int i = 0; i < measurement_num; i++) {
-        select_list[i] = strdup(
-            ("device" + std::to_string(i) + ".measurement" + std::to_string(i))
-                .c_str());
+        sensor_list[i] = strdup(("measurement" + std::to_string(i)).c_str());
     }
     ResultSet result_set =
-        tsfile_reader_query_path(reader, select_list, measurement_num, 16225600,
+        tsfile_reader_query_device(reader,"device0", sensor_list, measurement_num, 16225600,
                                  16225600 + max_rows - 1);
 
     ResultSetMetaData metadata = tsfile_result_set_get_metadata(result_set);
     ASSERT_EQ(metadata.column_num, measurement_num);
     ASSERT_EQ(std::string(metadata.column_names[4]),
-              std::string("device4.measurement4"));
+              std::string("device0.measurement4"));
     ASSERT_EQ(metadata.data_types[9], TS_DATATYPE_INT64);
     for (int i = 0; i < measurement_num - 1; i++) {
         ASSERT_TRUE(tsfile_result_set_has_next(result_set));
@@ -140,13 +138,12 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
     free_tsfile_result_set(&result_set);
     free_result_set_meta_data(metadata);
     for (int i = 0; i < measurement_num; i++) {
-        free(select_list[i]);
+        free(sensor_list[i]);
     }
-    free(select_list);
+    free(sensor_list);
     tsfile_reader_close(reader);
     // DeviceSchema schema = tsfile_reader_get_device_schema(reader,
     // "device4"); ASSERT_EQ(schema.timeseries_num, 1);
     // ASSERT_EQ(schema.timeseries_schema->name, std::string("measurement4"));
 }
-
 }  // namespace cwrapper

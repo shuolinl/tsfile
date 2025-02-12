@@ -112,7 +112,7 @@ TsRecord ts_record_new(const char *device_id, timestamp timestamp,
 }
 
 #define INSERT_DATA_INTO_TS_RECORD_BY_NAME_DEF(type)                 \
-    ERRNO insert_data_into_ts_record_by_name##type(                  \
+    ERRNO insert_data_into_ts_record_by_name_##type(                  \
         TsRecord data, const char *measurement_name, type value) {   \
         auto *record = (storage::TsRecord *)data;                    \
         storage::DataPoint point(measurement_name, value);           \
@@ -244,7 +244,7 @@ ERRNO tsfile_writer_register_device(TsFileWriter writer,
 
 ERRNO tsfile_writer_write_ts_record(TsFileWriter writer, TsRecord data) {
     auto *w = static_cast<storage::TsFileWriter *>(writer);
-    const auto *record = static_cast<storage::TsRecord *>(data);
+    const storage::TsRecord *record = static_cast<storage::TsRecord *>(data);
     const int ret = w->write_record(*record);
     return ret;
 }
@@ -263,19 +263,20 @@ ERRNO tsfile_writer_flush_data(TsFileWriter writer) {
 // Query
 
 ResultSet tsfile_reader_query_table(TsFileReader reader, const char *table_name,
-                                    const char **columns, uint32_t column_num,
+char **columns, uint32_t column_num,
                                     timestamp start_time, timestamp end_time) {
     // TODO: Implement query table with tsfile reader.
     return nullptr;
 }
 
-ResultSet tsfile_reader_query_path(TsFileReader reader, char **path_list,
-                                   uint32_t path_num, timestamp start_time,
-                                   timestamp end_time) {
+ResultSet tsfile_reader_query_device(TsFileReader reader, const char* device_name,
+    char** sensor_name, uint32_t sensor_num,
+                                   timestamp start_time, timestamp end_time) {
     auto *r = static_cast<storage::TsFileReader *>(reader);
     std::vector<std::string> selected_paths;
-    for (int i = 0; i < path_num; i++) {
-        selected_paths.push_back(path_list[i]);
+    selected_paths.reserve(sensor_num);
+    for (int i = 0; i < sensor_num; i++) {
+        selected_paths.push_back(std::string(device_name) + "." + std::string(sensor_name[i]));
     }
     storage::ResultSet *qds = nullptr;
     r->query(selected_paths, start_time, end_time, qds);

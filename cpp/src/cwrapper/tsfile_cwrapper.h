@@ -128,7 +128,7 @@ uint32_t tablet_get_cur_row_size(Tablet tablet);
 ERRNO tablet_add_timestamp(Tablet tablet, uint32_t row_index,
                            timestamp timestamp);
 
-#define TABLET_ADD_VALUE_BY_NAME(type)                                    \
+#define TABLET_ADD_VALUE_BY_NAME(type)                                        \
     ERRNO tablet_add_value_by_name_##type(Tablet* tablet, uint32_t row_index, \
                                           char* column_name, type value);
 
@@ -138,7 +138,7 @@ TABLET_ADD_VALUE_BY_NAME(float);
 TABLET_ADD_VALUE_BY_NAME(double);
 TABLET_ADD_VALUE_BY_NAME(bool);
 
-#define TABLE_ADD_VALUE_BY_INDEX(type)                                    \
+#define TABLE_ADD_VALUE_BY_INDEX(type)                                        \
     ERRNO tablet_add_value_by_index_##type(Tablet tablet, uint32_t row_index, \
                                            uint32_t column_index, type value);
 
@@ -155,9 +155,9 @@ void* tablet_get_value(Tablet tablet, uint32_t row_index, uint32_t schema_index,
 TsRecord ts_record_new(const char* device_id, timestamp timestamp,
                        int timeseries_num);
 
-#define INSERT_DATA_INTO_TS_RECORD_BY_NAME(type)   \
-    ERRNO insert_data_into_ts_record_by_name##type( \
-        TsRecord data, char* measurement_name, type value);
+#define INSERT_DATA_INTO_TS_RECORD_BY_NAME(type)     \
+    ERRNO insert_data_into_ts_record_by_name_##type( \
+        TsRecord data, const char* measurement_name, type value);
 
 INSERT_DATA_INTO_TS_RECORD_BY_NAME(int32_t);
 INSERT_DATA_INTO_TS_RECORD_BY_NAME(int64_t);
@@ -189,14 +189,15 @@ ERRNO tsfile_writer_flush_data(TsFileWriter writer);
 
 /*-------------------TsFile reader query data------------------ */
 ResultSet tsfile_reader_query_table(TsFileReader reader, const char* table_name,
-                                    const char** columns, uint32_t column_num,
+                                    char** columns, uint32_t column_num,
                                     timestamp start_time, timestamp end_time);
-ResultSet tsfile_reader_query_path(TsFileReader reader, char** path_list,
-                                   uint32_t path_num, timestamp start_time,
-                                   timestamp end_time);
+ResultSet tsfile_reader_query_device(TsFileReader reader,
+                                     const char* device_name,
+                                     char** sensor_name, uint32_t sensor_num,
+                                     timestamp start_time, timestamp end_time);
 bool tsfile_result_set_has_next(ResultSet result_set);
 
-#define TSFILE_RESULT_SET_GET_VALUE_BY_NAME(type)                        \
+#define TSFILE_RESULT_SET_GET_VALUE_BY_NAME(type)                         \
     type tsfile_result_set_get_value_by_name_##type(ResultSet result_set, \
                                                     const char* column_name)
 TSFILE_RESULT_SET_GET_VALUE_BY_NAME(bool);
@@ -205,7 +206,7 @@ TSFILE_RESULT_SET_GET_VALUE_BY_NAME(int64_t);
 TSFILE_RESULT_SET_GET_VALUE_BY_NAME(float);
 TSFILE_RESULT_SET_GET_VALUE_BY_NAME(double);
 
-#define TSFILE_RESULT_SET_GET_VALUE_BY_INDEX(type)                        \
+#define TSFILE_RESULT_SET_GET_VALUE_BY_INDEX(type)                         \
     type tsfile_result_set_get_value_by_index_##type(ResultSet result_set, \
                                                      uint32_t column_index);
 
@@ -215,13 +216,14 @@ TSFILE_RESULT_SET_GET_VALUE_BY_INDEX(float);
 TSFILE_RESULT_SET_GET_VALUE_BY_INDEX(double);
 TSFILE_RESULT_SET_GET_VALUE_BY_INDEX(bool);
 
-bool tsfile_result_set_is_null_by_name(ResultSet result_set, const char* column_name);
+bool tsfile_result_set_is_null_by_name(ResultSet result_set,
+                                       const char* column_name);
 
 bool tsfile_result_set_is_null_by_index(ResultSet result_set,
                                         uint32_t column_index);
 
 ResultSetMetaData tsfile_result_set_get_metadata(ResultSet result_set);
-char *tsfile_result_set_meta_get_column_name(ResultSetMetaData result_set,
+char* tsfile_result_set_meta_get_column_name(ResultSetMetaData result_set,
                                              uint32_t column_index);
 TSDataType tsfile_result_set_meta_get_data_type(ResultSetMetaData result_set,
                                                 uint32_t column_index);
@@ -231,7 +233,7 @@ int tsfile_result_set_meta_get_column_num(ResultSetMetaData result_set);
 TableSchema tsfile_reader_get_table_schema(TsFileReader reader,
                                            const char* table_name);
 DeviceSchema tsfile_reader_get_device_schema(TsFileReader reader,
-                                                 const char* device_id);
+                                             const char* device_id);
 
 TableSchema* tsfile_reader_get_all_table_schemas(TsFileReader reader,
                                                  uint32_t* schema_num);
