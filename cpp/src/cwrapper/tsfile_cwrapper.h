@@ -89,7 +89,7 @@ typedef struct device_schema {
     int timeseries_num;
 } DeviceSchema;
 
-typedef struct {
+typedef struct result_set_meta_data {
     char** column_names;
     TSDataType* data_types;
     int column_num;
@@ -215,7 +215,7 @@ TSFILE_RESULT_SET_GET_VALUE_BY_INDEX(float);
 TSFILE_RESULT_SET_GET_VALUE_BY_INDEX(double);
 TSFILE_RESULT_SET_GET_VALUE_BY_INDEX(bool);
 
-bool tsfile_result_set_is_null_by_name(ResultSet result_set, char* column_name);
+bool tsfile_result_set_is_null_by_name(ResultSet result_set, const char* column_name);
 
 bool tsfile_result_set_is_null_by_index(ResultSet result_set,
                                         uint32_t column_index);
