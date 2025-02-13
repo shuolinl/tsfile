@@ -27,18 +27,14 @@ extern "C" {
 using namespace common;
 
 namespace cwrapper {
-#define TSFILE_NAME "cwrapper.tsfile"
-class CWrapperTest : public testing::Test {
-   protected:
-    void TearDown() override { remove(TSFILE_NAME); }
-};
+class CWrapperTest : public testing::Test {};
 
 TEST_F(CWrapperTest, RegisterTimeSeries) {
     ERRNO code = 0;
     char* temperature = strdup("temperature");
     TimeseriesSchema ts_schema{temperature, TS_DATATYPE_INT32,
                                TS_ENCODING_PLAIN, TS_COMPRESSION_UNCOMPRESSED};
-    TsFileWriter writer = tsfile_writer_new(TSFILE_NAME, &code);
+    TsFileWriter writer = tsfile_writer_new("cwrapper_register_timeseries.tsfile", &code);
     ASSERT_EQ(code, 0);
     code = tsfile_writer_register_timeseries(writer, "device1", &ts_schema);
     ASSERT_EQ(code, 0);
@@ -51,7 +47,7 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
     const int device_num = 50;
     const int measurement_num = 50;
     DeviceSchema device_schema[50];
-    TsFileWriter writer = tsfile_writer_new(TSFILE_NAME, &code);
+    TsFileWriter writer = tsfile_writer_new("cwrapper_write_flush_and_read.tsfile", &code);
     ASSERT_EQ(code, 0);
     for (int i = 0; i < device_num; i++) {
         char* device_name = strdup(("device" + std::to_string(i)).c_str());
@@ -108,7 +104,7 @@ TEST_F(CWrapperTest, WriterFlushTabletAndReadData) {
     ASSERT_EQ(tsfile_writer_flush_data(writer), 0);
     ASSERT_EQ(tsfile_writer_close(writer), 0);
 
-    TsFileReader reader = tsfile_reader_new(TSFILE_NAME, &code);
+    TsFileReader reader = tsfile_reader_new("cwrapper_write_flush_and_read.tsfile", &code);
     ASSERT_EQ(code, 0);
 
     char** sensor_list =
