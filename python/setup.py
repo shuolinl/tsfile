@@ -52,33 +52,27 @@ def copy_header(source, target):
     if os.path.exists(source):
         shutil.copyfile(source, target)
 
-# source_include_dir = os.path.join(
-#     project_dir, "..", "cpp", "c_include", "cwrapper", "TsFile-cwrapper.h"
-# )
-# target_include_dir = os.path.join(project_dir, "tsfile", "TsFile-cwrapper.h")
-# copy_header(source_include_dir, target_include_dir)
-
-# if system == "Darwin":
-#     copy_lib_files(libtsfile_shard_dir, libtsfile_dir, version + ".dylib")
-# elif system == "Linux":
-#     copy_lib_files(libtsfile_shard_dir, libtsfile_dir, "so." + version)
-# else:
-#     copy_lib_files(libtsfile_shard_dir, libtsfile_dir, "dll")
-
 project_dir = os.path.dirname(os.path.abspath(__file__))
+
+source_include_dir = os.path.join(
+    project_dir, "..", "cpp", "src", "cwrapper", "tsfile_cwrapper.h"
+)
+
+target_include_dir = os.path.join(project_dir, "tsfile", "tsfile_cwrapper.h")
+copy_header(source_include_dir, target_include_dir)
 
 libtsfile_shard_dir = os.path.join(project_dir, "..", "cpp", "target", "build", "lib")
 libtsfile_dir = os.path.join(project_dir, "tsfile")
-
-source_file = [
-    # os.path.join("tsfile", "tsfile_pywrapper.pyx"),
-    os.path.join("tsfile", "tsfile_reader.pyx"),
-    os.path.join("tsfile", "tsfile_writer.pyx")
-]
-
-
-
 include_dir = os.path.join(project_dir, "tsfile")
+
+if system == "Darwin":
+    copy_lib_files(libtsfile_shard_dir, libtsfile_dir, version + ".dylib")
+elif system == "Linux":
+    copy_lib_files(libtsfile_shard_dir, libtsfile_dir, "so." + version)
+else:
+    copy_lib_files(libtsfile_shard_dir, libtsfile_dir, "dll")
+
+
 ext_modules_tsfile = [
     Extension(
         "tsfile.tsfile_py_cpp",
