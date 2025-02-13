@@ -17,7 +17,7 @@
 #
 from cpython.exc cimport PyErr_SetObject
 from cpython.ref cimport PyObject
-from exceptions import get_exception
+from tsfile.exceptions import get_exception
 
 #cython: language_level=3
 from .tsfile_cpp cimport *
@@ -178,8 +178,8 @@ cdef Tablet to_c_tablet(object tablet):
         columns_names[i] = strdup(tablet.get_measurements()[i].encode('utf-8'))
         columns_types[i] = to_c_data_type(tablet.get_data_types()[i])
 
-    ctablet = tablet_new_with_device(tablet.get_insert_target_name(), columns_names, columns_types, column_num,
-                                            tablet.get_row_number())
+    ctablet = tablet_new_with_device(tablet.get_device_id(), columns_names, columns_types, column_num,
+                                     tablet.get_row_number())
     free(columns_types)
     for i in range(column_num):
         free(columns_names[i])

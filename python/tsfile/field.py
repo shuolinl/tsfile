@@ -30,39 +30,9 @@ class Field(object):
         """
         self.__data_type = data_type
         self.value = value
+        if not isinstance(value, data_type.to_py_type()):
+            raise TypeError(f"Expected {data_type.to_py_type()} got {type(value)}")
         self.field_name = field_name
-
-    @staticmethod
-    def copy(field):
-        output = Field(field.get_data_type())
-        if output.get_data_type() is not None:
-            if output.get_data_type() == TSDataType.BOOLEAN:
-                output.set_bool_value(field.get_bool_value())
-            elif (
-                output.get_data_type() == TSDataType.INT32
-                or output.get_data_type() == TSDataType.DATE
-            ):
-                output.set_int_value(field.get_int_value())
-            elif (
-                output.get_data_type() == TSDataType.INT64
-                or output.get_data_type() == TSDataType.TIMESTAMP
-            ):
-                output.set_long_value(field.get_long_value())
-            elif output.get_data_type() == TSDataType.FLOAT:
-                output.set_float_value(field.get_float_value())
-            elif output.get_data_type() == TSDataType.DOUBLE:
-                output.set_double_value(field.get_double_value())
-            elif (
-                output.get_data_type() == TSDataType.TEXT
-                or output.get_data_type() == TSDataType.STRING
-                or output.get_data_type() == TSDataType.BLOB
-            ):
-                output.set_binary_value(field.get_binary_value())
-            else:
-                raise Exception(
-                    "unsupported data type {}".format(output.get_data_type())
-                )
-        return output
 
     def get_data_type(self):
         return self.__data_type
@@ -77,70 +47,83 @@ class Field(object):
         self.value = value
 
     def get_bool_value(self):
-        if self.__data_type is None:
-            raise Exception("Null Field Exception!")
         if (
-            self.__data_type != TSDataType.BOOLEAN
-            or self.value is None
-            or self.value is pd.NA
+                self.__data_type != TSDataType.BOOLEAN
+                or self.value is None
+                or self.value is pd.NA
         ):
             return None
         return self.value
 
     def set_int_value(self, value: int):
+        if isinstance(value, int):
+            raise TypeError(f"Expected int got {type(value)}")
+        if not np.iinfo(np.int32).min <= value <= np.iinfo(np.int32).max:
+            raise OverflowError(f"data:{value} out of range of int32")
         self.value = value
 
     def get_int_value(self):
-        if self.__data_type is None:
-            raise Exception("Null Field Exception!")
         if (
-            self.__data_type != TSDataType.INT32
-            and self.__data_type != TSDataType.DATE
-            or self.value is None
-            or self.value is pd.NA
+                self.__data_type != TSDataType.INT32
+                and self.__data_type != TSDataType.DATE
+                or self.value is None
+                or self.value is pd.NA
         ):
             return None
         return np.int32(self.value)
 
     def set_long_value(self, value: int):
+        if isinstance(value, int):
+            raise TypeError(f"Expected int got {type(value)}")
+
+        if not np.iinfo(np.int64).min <= value <= np.iinfo(np.int64).max:
+            raise OverflowError(f"data:{value} out of range of int64")
         self.value = value
 
     def get_long_value(self):
         if self.__data_type is None:
             raise Exception("Null Field Exception!")
         if (
-            self.__data_type != TSDataType.INT64
-            and self.__data_type != TSDataType.TIMESTAMP
-            or self.value is None
-            or self.value is pd.NA
+                self.__data_type != TSDataType.INT64
+                and self.__data_type != TSDataType.TIMESTAMP
+                or self.value is None
+                or self.value is pd.NA
         ):
             return None
         return np.int64(self.value)
 
     def set_float_value(self, value: float):
+        if isinstance(value, float):
+            raise TypeError(f"Expected float got {type(value)}")
+        if not np.finfo(np.float32).min <= value <= np.finfo(np.float32).max:
+            raise OverflowError(f"data:{value} out of range of float32")
         self.value = value
 
     def get_float_value(self):
         if self.__data_type is None:
             raise Exception("Null Field Exception!")
         if (
-            self.__data_type != TSDataType.FLOAT
-            or self.value is None
-            or self.value is pd.NA
+                self.__data_type != TSDataType.FLOAT
+                or self.value is None
+                or self.value is pd.NA
         ):
             return None
         return np.float32(self.value)
 
     def set_double_value(self, value: float):
+        if isinstance(value, float):
+            raise TypeError(f"Expected float got {type(value)}")
+        if not np.finfo(np.float64).min <= value <= np.finfo(np.float64).max:
+            raise OverflowError(f"data:{value} out of range of float64")
         self.value = value
 
     def get_double_value(self):
         if self.__data_type is None:
             raise Exception("Null Field Exception!")
         if (
-            self.__data_type != TSDataType.DOUBLE
-            or self.value is None
-            or self.value is pd.NA
+                self.__data_type != TSDataType.DOUBLE
+                or self.value is None
+                or self.value is pd.NA
         ):
             return None
         return np.float64(self.value)
@@ -152,11 +135,11 @@ class Field(object):
         if self.__data_type is None:
             raise Exception("Null Field Exception!")
         if (
-            self.__data_type != TSDataType.TEXT
-            and self.__data_type != TSDataType.STRING
-            and self.__data_type != TSDataType.BLOB
-            or self.value is None
-            or self.value is pd.NA
+                self.__data_type != TSDataType.TEXT
+                and self.__data_type != TSDataType.STRING
+                and self.__data_type != TSDataType.BLOB
+                or self.value is None
+                or self.value is pd.NA
         ):
             return None
         return self.value
@@ -165,9 +148,9 @@ class Field(object):
         if self.__data_type is None:
             raise Exception("Null Field Exception!")
         if (
-            self.__data_type != TSDataType.DATE
-            or self.value is None
-            or self.value is pd.NA
+                self.__data_type != TSDataType.DATE
+                or self.value is None
+                or self.value is pd.NA
         ):
             return None
         return parse_int_to_date(self.value)
@@ -176,10 +159,10 @@ class Field(object):
         if self.__data_type is None or self.value is None or self.value is pd.NA:
             return "None"
         # TEXT, STRING
-        elif self.__data_type == 5 or self.__data_type == 11:
+        elif self.__data_type == TSDataType.TEXT or self.__data_type == TSDataType.STRING:
             return self.value.decode("utf-8")
         # BLOB
-        elif self.__data_type == 10:
+        elif self.__data_type == TSDataType.BLOB:
             return str(hex(int.from_bytes(self.value, byteorder="big")))
         else:
             return str(self.get_object_value(self.__data_type))
@@ -187,36 +170,37 @@ class Field(object):
     def __str__(self):
         return self.get_string_value()
 
-    def get_object_value(self, data_type):
+    def get_object_value(self, data_type: TSDataType):
         """
         :param data_type: TSDataType
         """
         if self.__data_type is None or self.value is None or self.value is pd.NA:
             return None
-        if data_type == 0:
+        if data_type == TSDataType.BOOLEAN:
             return bool(self.value)
-        elif data_type == 1:
+        elif data_type == TSDataType.INT32:
             return np.int32(self.value)
-        elif data_type == 2 or data_type == 8:
+        elif data_type == TSDataType.INT64 or data_type == TSDataType.TIMESTAMP:
             return np.int64(self.value)
-        elif data_type == 3:
+        elif data_type == TSDataType.FLOAT:
             return np.float32(self.value)
-        elif data_type == 4:
+        elif data_type == TSDataType.DOUBLE:
             return np.float64(self.value)
-        elif data_type == 9:
+        elif data_type == TSDataType.DATE:
             return parse_int_to_date(self.value)
-        elif data_type == 5 or data_type == 10 or data_type == 11:
+        elif data_type == TSDataType.TEXT or data_type == TSDataType.BLOB or data_type == TSDataType.STRING:
             return self.value
         else:
             raise RuntimeError("Unsupported data type:" + str(data_type))
 
     @staticmethod
-    def get_field(value, data_type):
+    def get_field(field_name, value, data_type):
         """
+        :param field_name: field's name
         :param value: field value corresponding to the data type
         :param data_type: TSDataType
         """
         if value is None or value is pd.NA:
             return None
-        field = Field(data_type, value)
+        field = Field(field_name, data_type, value)
         return field

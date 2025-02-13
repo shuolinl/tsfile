@@ -25,8 +25,8 @@ class RowRecord(object):
         self.__field_list = field_list
         self.__device_id = device_id
 
-    def add_field(self, value, data_type):
-        self.__field_list.append(Field.get_field(value, data_type))
+    def add_field(self, field_name, value, data_type):
+        self.__field_list.append(Field.get_field(field_name, value, data_type))
 
     def __str__(self):
         str_list = [str(self.__timestamp)]

@@ -15,240 +15,140 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-
+import math
 import struct
 from enum import unique, IntEnum
 from typing import List, Union
 
+import numpy as np
+
 from .date_utils import parse_date_to_int
 from .bitmap import BitMap
-from .constants import TSDataType
-
-
-@unique
-class ColumnType(IntEnum):
-    TAG = 0
-    FIELD = 1
-    ATTRIBUTE = 2
-
-    def n_copy(self, n):
-        result = []
-        for i in range(n):
-            result.append(self)
-        return result
+from .constants import TSDataType, Category
 
 
 class Tablet(object):
-    def __init__(
-        self,
-        insert_target_name: str,
-        column_names: List[str],
-        data_types: List[TSDataType],
-        values: List[List],
-        timestamps: List[int],
-        column_types: List[ColumnType] = None,
-    ):
-        """
-        creating a tablet for insertion
-          for example using tree-model, considering device: root.sg1.d1
-            timestamps,     m1,    m2,     m3
-                     1,  125.3,  True,  text1
-                     2,  111.6, False,  text2
-                     3,  688.6,  True,  text3
-          for example using table-model, considering table: table1
-            timestamps,    id1,  attr1,    m1
-                     1,  id:1,  attr:1,   1.0
-                     2,  id:1,  attr:1,   2.0
-                     3,  id:2,  attr:2,   3.0
-        Notice: The tablet will be sorted at the initialization by timestamps
-        :param insert_target_name: Str, DeviceId if using tree model or TableName when using table model.
-        :param column_names: Str List, names of columns
-        :param data_types: TSDataType List, specify value types for columns
-        :param values: 2-D List, the values of each row should be the outer list element
-        :param timestamps: int List, contains the timestamps
-        :param column_types: ColumnType List, marking the type of each column, can be none for tree-view interfaces.
-        """
-        if len(timestamps) != len(values):
-            raise RuntimeError(
-                "Input error! len(timestamps) does not equal to len(values)!"
+
+    def __init__(self, device_id: str, column_name_list: list[str], type_list: list[TSDataType],
+                 max_row_num: int = 1024):
+        self.timestamp_list = [None for _ in range(max_row_num)]
+        self.data_list: List[List[Union[int, float, bool, str, bytes, None]]] = [
+            [None for _ in range(max_row_num)] for _ in range(len(column_name_list))
+        ]
+        self.device_id = device_id
+        self.column_name_list = column_name_list
+        self.type_list = type_list
+        self.max_row_num = max_row_num
+
+        self._type_ranges = {
+            TSDataType.INT32: (-2 ** 31, 2 ** 31 - 1),
+            TSDataType.INT64: (-2 ** 63, 2 ** 63 - 1),
+            TSDataType.FLOAT: (np.finfo(np.float32).min, np.finfo(np.float32).max),
+            TSDataType.DOUBLE: (np.finfo(np.float64).min, np.finfo(np.float64).max),
+        }
+
+    def _check_index(self, col_index : int, row_index : int):
+        if not (0 <= col_index < len(self.column_name_list)):
+            raise IndexError(f"column index {col_index} out of range [0, {len(self.column_name_list) - 1}]")
+
+        if not (0 <= row_index < self.max_row_num):
+            raise IndexError(f"Row index {row_index} out of range [0, {self.max_row_num - 1}]")
+
+    def get_column_name_list(self):
+        return self.column_name_list
+
+    def get_type_list(self):
+        return self.type_list
+
+    def get_timestamp_list(self):
+        return self.timestamp_list
+
+    def get_device_id(self):
+        return self.device_id
+
+    def get_value_list(self):
+        return self.data_list
+
+    def get_max_row_num(self):
+        return self.max_row_num
+
+    def add_column(self, column_name: str, column_type: TSDataType):
+        self.column_name_list.append(column_name)
+        self.type_list.append(column_type)
+
+    def remove_column(self, column_name: str):
+        ind = self.column_name_list.index(column_name)
+        self.column_name_list.remove(column_name)
+        self.type_list.remove(self.type_list[ind])
+
+    def set_timestamp_list(self, timestamp_list: list[int]):
+        self.timestamp_list = timestamp_list
+
+    def add_timestamp(self, row_index: int, timestamp: int):
+        self.timestamp_list[row_index] = timestamp
+
+    def set_timestamp(self, row_index: int, timestamp: int):
+        self.timestamp_list[row_index] = timestamp
+
+    def _check_numeric_range(self, value: Union[int, float], data_type: TSDataType):
+        min_val, max_val = self._type_ranges[data_type]
+        if math.isinf(value):
+            raise ValueError(
+                f"{data_type}.name not support inf"
+            )
+        if not (min_val <= value <= max_val):
+            raise OverflowError(f"data:{value} out of range ({min_val}, {max_val})")
+
+    def add_value_by_name(self, column_name: str, row_index: int, value: Union[int, float, bool, str, bytes]):
+        try:
+            col_index = self.column_name_list.index(column_name)
+        except ValueError:
+            raise ValueError(f"Column '{column_name}' does not exist") from None
+
+        if not (0 <= row_index < self.max_row_num):
+            raise IndexError(
+                f"Row index {row_index} out of range [0, {self.max_row_num - 1}]"
             )
 
-        if not Tablet.check_sorted(timestamps):
-            sorted_zipped = sorted(zip(timestamps, values))
-            result = zip(*sorted_zipped)
-            self.__timestamps, self.__values = [list(x) for x in result]
-        else:
-            self.__values = values
-            self.__timestamps = timestamps
+        expected_type = self.type_list[col_index]
 
-        self.__insert_target_name = insert_target_name
-        self.__measurements = column_names
-        self.__data_types = data_types
-        self.__row_number = len(timestamps)
-        self.__column_number = len(column_names)
-        if column_types is None:
-            self.__column_types = ColumnType.n_copy(
-                ColumnType.FIELD, self.__column_number
+        if not isinstance(value, expected_type.to_py_type()):
+            raise TypeError(f"Expected {expected_type.to_py_type()} got {type(value)}")
+
+        self._check_numeric_range(value, expected_type)
+
+        self.data_list[col_index][row_index] = value
+
+    def add_value_by_index(self, col_index: int, row_index: int, value: Union[int, float, bool, str, bytes]):
+        self._check_index(col_index, row_index)
+        expected_type = self.type_list[col_index]
+        if not isinstance(value, expected_type.to_py_type()):
+            raise TypeError(f"Expected {expected_type.to_py_type()} got {type(value)}")
+
+        self._check_numeric_range(value, expected_type)
+
+        self.data_list[col_index][row_index] = value
+
+    def get_value_by_index(self, col_index: int, row_index: int):
+        self._check_index(col_index, row_index)
+        return self.data_list[col_index][row_index]
+
+    def get_value_by_name(self, column_name: str, row_index: int):
+        try:
+            col_index = self.column_name_list.index(column_name)
+        except ValueError:
+            raise ValueError(f"Column '{column_name}' does not exist") from None
+        if not (0 <= row_index < self.max_row_num):
+            raise IndexError(
+                f"Row index {row_index} out of range [0, {self.max_row_num - 1}]"
             )
-        else:
-            self.__column_types = column_types
-
-    @staticmethod
-    def check_sorted(timestamps):
-        for i in range(1, len(timestamps)):
-            if timestamps[i] < timestamps[i - 1]:
-                return False
-        return True
-
-    def get_measurements(self):
-        return self.__measurements
-
-    def get_data_types(self):
-        return self.__data_types
-
-    def get_column_categories(self):
-        return self.__column_types
-
-    def get_row_number(self):
-        return self.__row_number
-
-    def get_insert_target_name(self):
-        return self.__insert_target_name
-
-    def get_timestamps(self):
-        return self.__timestamps
-
-    def get_binary_timestamps(self):
-        format_str_list = [">"]
-        values_tobe_packed = []
-        for timestamp in self.__timestamps:
-            format_str_list.append("q")
-            values_tobe_packed.append(timestamp)
-
-        format_str = "".join(format_str_list)
-        return struct.pack(format_str, *values_tobe_packed)
+        return self.data_list[col_index][row_index]
+    def get_value_list_by_name(self, column_name: str):
+        try:
+            col_index = self.column_name_list.index(column_name)
+        except ValueError:
+            raise ValueError(f"Column '{column_name}' does not exist") from None
+        return self.data_list[col_index]
 
 
-    def get_values(self):
-        return self.__values
-
-    def get_binary_values(self):
-        format_str_list = [">"]
-        values_tobe_packed = []
-        bitmaps: List[Union[BitMap, None]] = []
-        has_none = False
-        for i in range(self.__column_number):
-            bitmap = None
-            bitmaps.append(bitmap)
-            data_type = self.__data_types[i]
-            # BOOLEAN
-            if data_type == 0:
-                format_str_list.append(str(self.__row_number))
-                format_str_list.append("?")
-                for j in range(self.__row_number):
-                    if self.__values[j][i] is not None:
-                        values_tobe_packed.append(self.__values[j][i])
-                    else:
-                        values_tobe_packed.append(False)
-                        self.__mark_none_value(bitmaps, i, j)
-                        has_none = True
-            # INT32
-            elif data_type == 1:
-                format_str_list.append(str(self.__row_number))
-                format_str_list.append("i")
-                for j in range(self.__row_number):
-                    if self.__values[j][i] is not None:
-                        values_tobe_packed.append(self.__values[j][i])
-                    else:
-                        values_tobe_packed.append(0)
-                        self.__mark_none_value(bitmaps, i, j)
-                        has_none = True
-            # INT64 or TIMESTAMP
-            elif data_type == 2 or data_type == 8:
-                format_str_list.append(str(self.__row_number))
-                format_str_list.append("q")
-                for j in range(self.__row_number):
-                    if self.__values[j][i] is not None:
-                        values_tobe_packed.append(self.__values[j][i])
-                    else:
-                        values_tobe_packed.append(0)
-                        self.__mark_none_value(bitmaps, i, j)
-                        has_none = True
-            # FLOAT
-            elif data_type == 3:
-                format_str_list.append(str(self.__row_number))
-                format_str_list.append("f")
-                for j in range(self.__row_number):
-                    if self.__values[j][i] is not None:
-                        values_tobe_packed.append(self.__values[j][i])
-                    else:
-                        values_tobe_packed.append(0)
-                        self.__mark_none_value(bitmaps, i, j)
-                        has_none = True
-            # DOUBLE
-            elif data_type == 4:
-                format_str_list.append(str(self.__row_number))
-                format_str_list.append("d")
-                for j in range(self.__row_number):
-                    if self.__values[j][i] is not None:
-                        values_tobe_packed.append(self.__values[j][i])
-                    else:
-                        values_tobe_packed.append(0)
-                        self.__mark_none_value(bitmaps, i, j)
-                        has_none = True
-            # TEXT, STRING, BLOB
-            elif data_type == 5 or data_type == 11 or data_type == 10:
-                for j in range(self.__row_number):
-                    if self.__values[j][i] is not None:
-                        if isinstance(self.__values[j][i], str):
-                            value_bytes = bytes(self.__values[j][i], "utf-8")
-                        else:
-                            value_bytes = self.__values[j][i]
-                        format_str_list.append("i")
-                        format_str_list.append(str(len(value_bytes)))
-                        format_str_list.append("s")
-                        values_tobe_packed.append(len(value_bytes))
-                        values_tobe_packed.append(value_bytes)
-                    else:
-                        value_bytes = bytes("", "utf-8")
-                        format_str_list.append("i")
-                        format_str_list.append(str(len(value_bytes)))
-                        format_str_list.append("s")
-                        values_tobe_packed.append(len(value_bytes))
-                        values_tobe_packed.append(value_bytes)
-                        self.__mark_none_value(bitmaps, i, j)
-                        has_none = True
-            # DATE
-            elif data_type == 9:
-                format_str_list.append(str(self.__row_number))
-                format_str_list.append("i")
-                for j in range(self.__row_number):
-                    if self.__values[j][i] is not None:
-                        values_tobe_packed.append(
-                            parse_date_to_int(self.__values[j][i])
-                        )
-                    else:
-                        values_tobe_packed.append(0)
-                        self.__mark_none_value(bitmaps, i, j)
-                        has_none = True
-            else:
-                raise RuntimeError("Unsupported data type:" + str(self.__data_types[i]))
-
-        if has_none:
-            for i in range(self.__column_number):
-                format_str_list.append("?")
-                if bitmaps[i] is None:
-                    values_tobe_packed.append(False)
-                else:
-                    values_tobe_packed.append(True)
-                    format_str_list.append(str(self.__row_number // 8 + 1))
-                    format_str_list.append("c")
-                    for j in range(self.__row_number // 8 + 1):
-                        values_tobe_packed.append(bytes([bitmaps[i].bits[j]]))
-        format_str = "".join(format_str_list)
-        return struct.pack(format_str, *values_tobe_packed)
-
-    def __mark_none_value(self, bitmaps, column, row):
-        if bitmaps[column] is None:
-            bitmaps[column] = BitMap(self.__row_number)
-        bitmaps[column].mark(row)
+        

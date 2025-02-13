@@ -31,6 +31,20 @@ class TSDataType(IntEnum):
     BLOB = 10
     STRING = 11
 
+    def to_py_type(self):
+        if self == TSDataType.BOOLEAN:
+            return bool
+        elif self == TSDataType.INT32:
+            return int
+        elif self == TSDataType.INT64:
+            return int
+        elif self == TSDataType.FLOAT:
+            return float
+        elif self == TSDataType.DOUBLE:
+            return float
+        elif self == TSDataType.TEXT:
+            return str
+
 @unique
 class TSEncoding(IntEnum):
     PLAIN = 0
