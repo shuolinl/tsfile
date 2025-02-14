@@ -22,7 +22,7 @@ from libc.stdint cimport uint32_t, int32_t, int64_t
 ctypedef int32_t ErrorCode
 
 # import symbols from tsfile_cwrapper.h
-cdef extern from "./c_include/tsfile_cwrapper.h":
+cdef extern from "./tsfile_cwrapper.h":
     # common
     ctypedef int64_t timestamp
 
