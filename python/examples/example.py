@@ -36,8 +36,8 @@ writer.write_row_record(rc)
 writer.close()
 
 reader = TsFileReader(data_dir)
-paths = ["temp1", "temp2"]
-result = reader.query_timeseries("root.device", paths, 0, 110)
+sensor_name = ["temp1", "temp2"]
+result = reader.query_timeseries("root.device", sensor_name, 0, 110)
 while result.has_next():
     print(result.get_value_by_index(0))
     print(result.get_value_by_index(1))

@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# from .tsfile_dataframe import read_tsfile, write_tsfile
+
 from .constants import *
 from .schema import *
 from .row_record import *
