@@ -16,6 +16,13 @@
 # under the License.
 #
 
+import ctypes
+import os
+import platform
+system = platform.system()
+if system == "Windows":
+    ctypes.WinDLL(os.path.join(os.path.dirname(__file__), "libtsfile.dll"), winmode=0)
+
 from .constants import *
 from .schema import *
 from .row_record import *

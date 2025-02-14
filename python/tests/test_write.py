@@ -30,6 +30,7 @@ def test_row_record_write():
 
     record = RowRecord("root.device1", 10,[Field("level1", TSDataType.INT64, 10)])
     writer.write_row_record(record)
+    writer.close()
     if os.path.exists("record_write.tsfile"):
         os.remove("record_write.tsfile")
 
@@ -49,6 +50,7 @@ def test_tablet_write():
         tablet.add_value_by_name("level2", i, i * 0.1)
 
     writer.write_tablet(tablet)
+    writer.close()
     if os.path.exists("tablet_write.tsfile"):
         os.remove("tablet_write.tsfile")
 
