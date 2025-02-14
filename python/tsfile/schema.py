@@ -28,8 +28,8 @@ class TimeseriesSchema:
     def __init__(self, timeseries_name : str, data_type : TSDataType, encoding_type : TSEncoding = None, compression_type : Compressor = None):
         self.timeseries_name = timeseries_name
         self.data_type = data_type
-        self.encoding_type = encoding_type
-        self.compression_type = compression_type
+        self.encoding_type = encoding_type if encoding_type is not None else TSEncoding.PLAIN
+        self.compression_type = compression_type if compression_type is not None else Compressor.UNCOMPRESSED
 
 class DeviceSchema:
     device_name = None

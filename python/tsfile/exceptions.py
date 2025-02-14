@@ -20,93 +20,95 @@ class LibraryError(Exception):
     _default_message = "Unknown error occurred"
     _default_code = -1
 
-    def __init__(self, code=None, message=None):
-        self.code = code
-        self.message = message or self._default_message
+    def __init__(self, code=None, context=None):
+        self.code = code if code is not None else self._default_code
+        self.message = context if context is not None else self._default_message
         super().__init__(f"[{code}] {self.message}")
+    def __str__(self):
+        return f"{self.code}: {self.message}"
 
 class OOMError(LibraryError):
-    default_message = "Out of memory"
-    default_code = 1
+    _default_message = "Out of memory"
+    _default_code = 1
 
 class NotExistsError(LibraryError):
-    default_message = "Requested resource does not exist"
-    default_code = 2
+    _default_message = "Requested resource does not exist"
+    _default_code = 2
 
 class AlreadyExistsError(LibraryError):
-    default_message = "Resource already exists"
-    default_code = 3
+    _default_message = "Resource already exists"
+    _default_code = 3
 
 # 参数相关异常
 class InvalidArgumentError(LibraryError):
-    default_message = "Invalid argument provided"
-    default_code = 4
+    _default_message = "Invalid argument provided"
+    _default_code = 4
 
 class OutOfRangeError(LibraryError):
-    default_message = "Value out of valid range"
-    default_code = 5
+    _default_message = "Value out of valid range"
+    _default_code = 5
 
 # IO操作相关异常
 class PartialReadError(LibraryError):
-    default_message = "Incomplete data read operation"
-    default_code = 6
+    _default_message = "Incomplete data read operation"
+    _default_code = 6
 
 class FileOpenError(LibraryError):
-    default_message = "Failed to open file"
-    default_code = 28
+    _default_message = "Failed to open file"
+    _default_code = 28
 
 class FileCloseError(LibraryError):
-    default_message = "Failed to close file"
-    default_code = 29
+    _default_message = "Failed to close file"
+    _default_code = 29
 
 class FileWriteError(LibraryError):
-    default_message = "Failed to write to file"
-    default_code = 30
+    _default_message = "Failed to write to file"
+    _default_code = 30
 
 class FileReadError(LibraryError):
-    default_message = "Failed to read from file"
-    default_code = 31
+    _default_message = "Failed to read from file"
+    _default_code = 31
 
 class FileSyncError(LibraryError):
-    default_message = "Failed to sync file contents"
-    default_code = 32
+    _default_message = "Failed to sync file contents"
+    _default_code = 32
 
 class MetadataError(LibraryError):
-    default_message = "Metadata inconsistency detected"
-    default_code = 33
+    _default_message = "Metadata inconsistency detected"
+    _default_code = 33
 
 class BufferNotEnoughError(LibraryError):
-    default_message = "Insufficient buffer space"
-    default_code = 36
+    _default_message = "Insufficient buffer space"
+    _default_code = 36
 
 class DeviceNotExistError(LibraryError):
-    default_message = "Requested device does not exist"
-    default_code = 44
+    _default_message = "Requested device does not exist"
+    _default_code = 44
 
 class MeasurementNotExistError(LibraryError):
-    default_message = "Specified measurement does not exist"
-    default_code = 45
+    _default_message = "Specified measurement does not exist"
+    _default_code = 45
 
 class InvalidQueryError(LibraryError):
-    default_message = "Malformed query syntax"
-    default_code = 46
+    _default_message = "Malformed query syntax"
+    _default_code = 46
 
 class CompressionError(LibraryError):
-    default_message = "Data compression/decompression failed"
-    default_code = 48
+    _default_message = "Data compression/decompression failed"
+    _default_code = 48
 
 class TableNotExistError(LibraryError):
-    default_message = "Requested table does not exist"
-    default_code = 49
+    _default_message = "Requested table does not exist"
+    _default_code = 49
 
 
 class TypeNotSupportedError(LibraryError):
-    default_message = "Unsupported data type"
-    default_code = 26
+    _default_message = "Unsupported data type"
+    _default_code = 26
 
 class TypeMismatchError(LibraryError):
-    default_message = "Data type mismatch"
-    default_code = 27
+    _default_message = "Data type mismatch"
+    _default_code = 27
 
 ERROR_MAPPING = {
     1: OOMError,
@@ -131,9 +133,14 @@ ERROR_MAPPING = {
     49: TableNotExistError,
 }
 
-def get_exception(code : int, context: str = "") -> BaseException:
+def get_exception(code : int, context : str = None):
     if code == 0:
         return None
 
-    exc_type = ERROR_MAPPING.get(code, BaseException)
-    return exc_type(code, message=context)
+    exc_type = ERROR_MAPPING.get(code)
+    if not exc_type:
+        return LibraryError(code=code, message=f"Unmapped error code: {code}")
+    return (exc_type, {
+        "code": code,
+        "context": context if context is not None else exc_type._default_message
+    })

@@ -19,6 +19,7 @@
 #cython: language_level=3
 
 from .tsfile_cpp cimport *
+
 cdef public api inline void check_error(int errcode, const char* context=NULL) except *
 cdef public api object from_c_result_set_meta_data(ResultSetMetaData schema)
 cdef public api TSDataType to_c_data_type(object data_type)

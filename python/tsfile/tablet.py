@@ -57,7 +57,7 @@ class Tablet(object):
     def get_column_name_list(self):
         return self.column_name_list
 
-    def get_type_list(self):
+    def get_data_type_list(self):
         return self.type_list
 
     def get_timestamp_list(self):

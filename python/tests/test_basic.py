@@ -29,7 +29,7 @@ def test_tablet():
 
     assert "test" == tablet.get_device_id()
     assert 4 == len(tablet.get_column_name_list())
-    assert TSDataType.INT32 == tablet.get_type_list()[0]
+    assert TSDataType.INT32 == tablet.get_data_type_list()[0]
 
     tablet.add_timestamp(0, 10)
     tablet.add_value_by_name("temp1", 0, 10)

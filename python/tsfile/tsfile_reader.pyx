@@ -85,7 +85,7 @@ cdef class ResultSetPy:
         This method queries the underlying result set to determine if the value
         at the given column index position represents a null value.
         """
-        if index >= self.metadata.column_num or index < 0:
+        if index >= len(self.metadata.column_list) or index < 0:
             raise IndexError(
                 f"Column index {index} out of range (column count: {self.metadata.column_num})"
             )
@@ -136,6 +136,11 @@ cdef class TsFileReaderPy:
         pyresult = ResultSetPy()
         pyresult.init_c(result, device_name)
         return pyresult
+
+    def close(self):
+        cdef ErrorCode errcode
+        errorcode = tsfile_reader_close(self.reader)
+        check_error(errorcode)
 
 
 

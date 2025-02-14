@@ -17,7 +17,14 @@
 #
 from cpython.exc cimport PyErr_SetObject
 from cpython.ref cimport PyObject
-from tsfile.exceptions import get_exception
+from tsfile.exceptions import (
+    LibraryError,
+    OOMError,
+    AlreadyExistsError,
+    InvalidQueryError,
+    get_exception,
+    ERROR_MAPPING
+    )
 
 #cython: language_level=3
 from .tsfile_cpp cimport *
@@ -36,14 +43,15 @@ from tsfile.schema import Compressor as CompressorPy, Category as CategoryPy
 
 cdef inline void check_error(int errcode, const char* context=NULL) except *:
     cdef:
-        str context_str = context.decode('utf-8') if context else ""
-        object exc_obj
+        object exc_type
+        object exc_instance
 
     if errcode == 0:
         return
 
-    exc_obj = get_exception(errcode, context_str)
-    PyErr_SetObject(type(exc_obj), exc_obj)
+    exc_type = ERROR_MAPPING.get(errcode)
+    exc_instance = exc_type(errcode, "")
+    PyErr_SetObject(exc_type, exc_instance)
 
 # convert from c to python
 cdef object from_c_result_set_meta_data(ResultSetMetaData schema):
@@ -171,52 +179,64 @@ cdef TableSchema* to_c_table_schema(object py_schema):
 
 cdef Tablet to_c_tablet(object tablet):
     cdef Tablet ctablet
-    column_num = len(tablet.get_column_categories())
+    cdef int max_row_num
+    cdef TSDataType data_type
+    cdef int64_t timestamp
+    cdef bytes device_id_bytes = PyUnicode_AsUTF8String(tablet.get_device_id())
+    cdef const char * device_id_c = device_id_bytes
+
+
+    column_num = len(tablet.get_column_name_list())
     columns_names = <char**> malloc(sizeof(char *) * column_num)
     columns_types = <TSDataType *> malloc(sizeof(TSDataType) * column_num)
     for i in range(column_num):
-        columns_names[i] = strdup(tablet.get_measurements()[i].encode('utf-8'))
-        columns_types[i] = to_c_data_type(tablet.get_data_types()[i])
+        columns_names[i] = strdup(tablet.get_column_name_list()[i].encode('utf-8'))
+        columns_types[i] = to_c_data_type(tablet.get_data_type_list()[i])
 
-    ctablet = tablet_new_with_device(tablet.get_device_id(), columns_names, columns_types, column_num,
-                                     tablet.get_row_number())
+    max_row_num = tablet.get_max_row_num();
+
+    ctablet = tablet_new_with_device(device_id_c, columns_names, columns_types, column_num,
+                                     max_row_num)
     free(columns_types)
     for i in range(column_num):
         free(columns_names[i])
     free(columns_names)
 
-    row_num = tablet.get_row_number()
-    for row in range(row_num):
-        tablet_add_timestamp(ctablet, row, tablet.get_timestamps()[row])
+    for row in range(max_row_num):
+        timestamp_py = tablet.get_timestamp_list()[row]
+        if timestamp_py is None:
+            continue
+        timestamp = timestamp_py
+        tablet_add_timestamp(ctablet, row, timestamp)
 
     for col in range(column_num):
-        data_type = to_c_data_type(tablet.get_data_types()[col])
-        value = tablet.get_values()[col]
+        data_type = to_c_data_type(tablet.get_data_type_list()[col])
+        value = tablet.get_value_list()[col]
         # BOOLEAN
         if data_type == TS_DATATYPE_BOOLEAN:
-            for row in range(row_num):
+            for row in range(max_row_num):
                 if value[row] is not None:
                     tablet_add_value_by_index_bool(ctablet, row, col, value[row])
         # INT32
         elif data_type == TS_DATATYPE_INT32:
-            for row in range(row_num):
+            for row in range(max_row_num):
                 if value[row] is not None:
                     tablet_add_value_by_index_int32_t(ctablet, row, col, value[row])
 
         # INT64
         elif data_type == TS_DATATYPE_INT64:
-            for row in range(row_num):
+            for row in range(max_row_num):
                 if value[row] is not None:
                     tablet_add_value_by_index_int64_t(ctablet, row, col, value[row])
         # FLOAT
         elif data_type == TS_DATATYPE_FLOAT:
-            for row in range(row_num):
+            for row in range(max_row_num):
                 if value[row] is not None:
                     tablet_add_value_by_index_float(ctablet, row, col, value[row])
 
         # DOUBLE
         elif data_type == TS_DATATYPE_DOUBLE:
-            for row in range(row_num):
+            for row in range(max_row_num):
                 if value[row] is not None:
                     tablet_add_value_by_index_double(ctablet, row, col, value[row])
 
