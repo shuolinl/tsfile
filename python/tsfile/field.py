@@ -16,7 +16,6 @@
 # under the License.
 #
 
-# for package
 from .constants import TSDataType
 from .date_utils import parse_int_to_date
 import numpy as np

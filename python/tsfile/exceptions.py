@@ -39,7 +39,6 @@ class AlreadyExistsError(LibraryError):
     _default_message = "Resource already exists"
     _default_code = 3
 
-# 参数相关异常
 class InvalidArgumentError(LibraryError):
     _default_message = "Invalid argument provided"
     _default_code = 4
@@ -48,7 +47,6 @@ class OutOfRangeError(LibraryError):
     _default_message = "Value out of valid range"
     _default_code = 5
 
-# IO操作相关异常
 class PartialReadError(LibraryError):
     _default_message = "Incomplete data read operation"
     _default_code = 6

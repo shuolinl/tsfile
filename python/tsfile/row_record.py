@@ -16,7 +16,6 @@
 # under the License.
 #
 
-# for package
 from tsfile.field import Field
 
 class RowRecord(object):
