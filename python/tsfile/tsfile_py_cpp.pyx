@@ -15,32 +15,23 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-from cpython.exc cimport PyErr_SetObject
-from cpython.ref cimport PyObject
-from tsfile.exceptions import (
-    LibraryError,
-    OOMError,
-    AlreadyExistsError,
-    InvalidQueryError,
-    get_exception,
-    ERROR_MAPPING
-    )
 
 #cython: language_level=3
+
 from .tsfile_cpp cimport *
 
 from libc.stdlib cimport free
 from libc.stdlib cimport malloc
 from libc.string cimport strdup
-
-from cpython.object cimport PyObject
-from cpython.bytes cimport PyBytes_AsString
+from cpython.exc cimport PyErr_SetObject
 from cpython.unicode cimport PyUnicode_AsUTF8String, PyUnicode_AsUTF8
 
+from tsfile.exceptions import ERROR_MAPPING
 from tsfile.schema import ResultSetMetaData as ResultSetMetaDataPy
 from tsfile.schema import TSDataType as TSDataTypePy, TSEncoding as TSEncodingPy
 from tsfile.schema import Compressor as CompressorPy, Category as CategoryPy
 
+# check exception and set py exception object
 cdef inline void check_error(int errcode, const char* context=NULL) except *:
     cdef:
         object exc_type
@@ -353,11 +344,13 @@ cdef ResultSet tsfile_reader_query_table_c(TsFileReader reader, object table_nam
                 raise MemoryError("Failed to allocate memory for column name")
         result = tsfile_reader_query_table(reader, table_name_c, columns,  column_num, start_time, end_time)
         return result
-    except Exception as e:
-        for i in range(column_num):
-            free(<void*>columns[i])
-        free(<void*>columns)
-        raise e
+    finally:
+        if columns != NULL:
+            for i in range(column_num):
+                free(<void*>columns[i])
+                columns[i] = NULL
+            free(<void*>columns)
+            columns = NULL
 
 cdef ResultSet tsfile_reader_query_paths_c(TsFileReader reader, object device_name, object sensor_list, int64_t start_time,
                                                       int64_t end_time):
@@ -376,9 +369,12 @@ cdef ResultSet tsfile_reader_query_paths_c(TsFileReader reader, object device_na
                 raise MemoryError("Failed to allocate memory for path")
         result = tsfile_reader_query_device(reader, device_name_c, sensor_list_c, path_num, start_time, end_time)
         return result
-    except Exception as e:
-        for i in range(path_num):
-            free(<void*>sensor_list_c[i])
-        free(<void*>sensor_list_c)
-        raise e
+    finally:
+        if sensor_list_c != NULL:
+            for i in range(path_num):
+                if sensor_list_c[i] != NULL:
+                    free(<void*>sensor_list_c[i])
+                    sensor_list_c[i] = NULL
+            free(<void*>sensor_list_c)
+            sensor_list_c = NULL
 

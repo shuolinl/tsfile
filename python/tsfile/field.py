@@ -16,10 +16,11 @@
 # under the License.
 #
 
-from .constants import TSDataType
-from .date_utils import parse_int_to_date
 import numpy as np
 import pandas as pd
+
+from .constants import TSDataType
+from .date_utils import parse_int_to_date
 
 
 class Field(object):
@@ -46,6 +47,8 @@ class Field(object):
         self.value = value
 
     def get_bool_value(self):
+        if self.__data_type is None:
+            raise Exception("Null Field Exception!")
         if (
                 self.__data_type != TSDataType.BOOLEAN
                 or self.value is None
@@ -55,13 +58,16 @@ class Field(object):
         return self.value
 
     def set_int_value(self, value: int):
-        if isinstance(value, int):
+        if not isinstance(value, int):
             raise TypeError(f"Expected int got {type(value)}")
         if not np.iinfo(np.int32).min <= value <= np.iinfo(np.int32).max:
             raise OverflowError(f"data:{value} out of range of int32")
         self.value = value
 
     def get_int_value(self):
+        if self.__data_type is None:
+            raise Exception("Null Field Exception!")
+
         if (
                 self.__data_type != TSDataType.INT32
                 and self.__data_type != TSDataType.DATE
@@ -72,7 +78,7 @@ class Field(object):
         return np.int32(self.value)
 
     def set_long_value(self, value: int):
-        if isinstance(value, int):
+        if not isinstance(value, int):
             raise TypeError(f"Expected int got {type(value)}")
 
         if not np.iinfo(np.int64).min <= value <= np.iinfo(np.int64).max:
@@ -85,6 +91,7 @@ class Field(object):
         if (
                 self.__data_type != TSDataType.INT64
                 and self.__data_type != TSDataType.TIMESTAMP
+                and self.__data_type != TSDataType.INT32
                 or self.value is None
                 or self.value is pd.NA
         ):

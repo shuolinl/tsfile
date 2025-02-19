@@ -164,6 +164,8 @@ cdef extern from "./tsfile_cwrapper.h":
     bint tsfile_result_set_has_next(ResultSet result_set);
     bint tsfile_result_set_is_null_by_index(ResultSet result_set, uint32_t column_index);
     bint tsfile_result_set_is_null_by_name(ResultSet result_set, const char* column_name);
+    void free_tsfile_result_set(ResultSet* result_set);
+
 
     int32_t tsfile_result_set_get_value_by_index_int32_t(ResultSet result_set, uint32_t column_index);
     int64_t tsfile_result_set_get_value_by_index_int64_t(ResultSet result_set, uint32_t column_index);
@@ -171,3 +173,4 @@ cdef extern from "./tsfile_cwrapper.h":
     float tsfile_result_set_get_value_by_index_float(ResultSet result_set, uint32_t column_index);
     double tsfile_result_set_get_value_by_index_double(ResultSet result_set, uint32_t column_index);
     ResultSetMetaData tsfile_result_set_get_metadata(ResultSet result_set);
+    void free_result_set_meta_data(ResultSetMetaData result_set_meta_data);

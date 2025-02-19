@@ -86,9 +86,6 @@ class Tablet(object):
     def add_timestamp(self, row_index: int, timestamp: int):
         self.timestamp_list[row_index] = timestamp
 
-    def set_timestamp(self, row_index: int, timestamp: int):
-        self.timestamp_list[row_index] = timestamp
-
     def _check_numeric_range(self, value: Union[int, float], data_type: TSDataType):
         min_val, max_val = self._type_ranges[data_type]
         if math.isinf(value):

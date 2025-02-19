@@ -137,8 +137,5 @@ def get_exception(code : int, context : str = None):
 
     exc_type = ERROR_MAPPING.get(code)
     if not exc_type:
-        return LibraryError(code=code, message=f"Unmapped error code: {code}")
-    return (exc_type, {
-        "code": code,
-        "context": context if context is not None else exc_type._default_message
-    })
+        return LibraryError(code=code, context=f"Unmapped error code: {code}, message: {str}")
+    return exc_type(code=code, context=context)

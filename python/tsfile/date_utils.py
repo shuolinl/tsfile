@@ -36,6 +36,6 @@ def parse_int_to_date(date_int: int) -> date:
 def parse_date_to_int(local_date: date) -> int:
     if local_date is None:
         raise DateTimeParseException("Date expression is none or empty.")
-    if local_date.year < 1000:
+    if local_date.year < 1000 or local_date.year > 9999:
         raise DateTimeParseException("Year must be between 1000 and 9999.")
     return local_date.year * 10000 + local_date.month * 100 + local_date.day

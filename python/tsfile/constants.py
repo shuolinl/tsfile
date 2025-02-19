@@ -42,7 +42,7 @@ class TSDataType(IntEnum):
             return float
         elif self == TSDataType.DOUBLE:
             return float
-        elif self == TSDataType.TEXT:
+        elif self == TSDataType.TEXT or self == TSDataType.STRING:
             return str
 
 @unique

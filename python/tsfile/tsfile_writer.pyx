@@ -18,16 +18,13 @@
 
 #cython: language_level=3
 
-from . import RowRecord
-
 from .tsfile_cpp cimport *
 from .tsfile_py_cpp cimport *
 
-# To avoid name conflicts
+from tsfile.row_record import RowRecord
 from tsfile.schema import TimeseriesSchema as TimeseriesSchemaPy, DeviceSchema as DeviceSchemaPy
 from tsfile.schema import TableSchema as TableSchemaPy
 from tsfile.tablet import Tablet as TabletPy
-from cpython.unicode cimport PyUnicode_AsUTF8String
 
 cdef class TsFileWriterPy:
     cdef TsFileWriter writer
@@ -101,7 +98,6 @@ cdef class TsFileWriterPy:
         finally:
             free_c_row_record(record_c)
 
-
     def close(self):
         """
         Flush data and Close tsfile writer.
@@ -111,3 +107,6 @@ cdef class TsFileWriterPy:
         check_error(errno)
         errno = tsfile_writer_close(self.writer)
         check_error(errno)
+
+    def __dealloc(self):
+        self.close()

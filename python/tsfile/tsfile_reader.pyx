@@ -21,29 +21,28 @@
 from .tsfile_cpp cimport *
 from .tsfile_py_cpp cimport *
 
-from tsfile.schema import TSDataType as TSDataTypePy
-from cpython.bytes cimport PyBytes_AsString
-from cpython.unicode cimport PyUnicode_AsUTF8String
 from typing import List
 
+from tsfile.schema import TSDataType as TSDataTypePy
 
 cdef class ResultSetPy:
     """
     Get data from a query result.
     """
     cdef ResultSet result
-    cdef ResultSetMetaData metadata_c
     cdef public object metadata
     cdef public object device_name
 
-    cdef init_c(self, ResultSet result, object device_name):
+    def __init__(self, ResultSet result, object device_name ):
         """
         Init c symbols.
         """
+        cdef ResultSetMetaData metadata_c
         self.result = result
-        self.metadata_c = tsfile_result_set_get_metadata(self.result)
-        self.metadata = from_c_result_set_meta_data(self.metadata_c)
+        metadata_c = tsfile_result_set_get_metadata(self.result)
+        self.metadata = from_c_result_set_meta_data(metadata_c)
         self.metadata.set_device_name(device_name)
+        free_result_set_meta_data(metadata_c)
 
     def has_next(self):
         """
@@ -98,6 +97,15 @@ cdef class ResultSetPy:
         ind = self.metadata.get_column_name_index(name)
         return self.is_null_by_index(ind)
 
+    def close(self):
+        """
+        Close result set, free C resource.
+        :return:
+        """
+        free_tsfile_result_set(&self.result)
+
+    def __dealloc__(self):
+        self.close()
 
 cdef class TsFileReaderPy:
     """
@@ -133,14 +141,19 @@ cdef class TsFileReaderPy:
         """
         cdef ResultSet result;
         result = tsfile_reader_query_paths_c(self.reader, device_name,  sensor_list, start_time, end_time)
-        pyresult = ResultSetPy()
-        pyresult.init_c(result, device_name)
+        pyresult = ResultSetPy(result, device_name)
         return pyresult
 
     def close(self):
+        """
+        Close TsFile Reader.
+        """
         cdef ErrorCode errcode
         errorcode = tsfile_reader_close(self.reader)
         check_error(errorcode)
+
+    def __dealloc__(self):
+        self.close()
 
 
 
